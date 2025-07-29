@@ -1,4 +1,7 @@
-// Inisialisasi FFmpeg dari CDN
+// Simpan file asli
+let currentFile;
+
+// Inisialisasi FFmpeg
 let { createFFmpeg, fetchFile } = FFmpeg;
 const ffmpeg = createFFmpeg({ log: true });
 
@@ -65,6 +68,7 @@ function handleFile(file) {
     return;
   }
 
+  currentFile = file; // Simpan file asli
   const url = URL.createObjectURL(file);
   video.src = url;
   controls.style.display = 'block';
@@ -112,8 +116,8 @@ aiSuggestBtn.addEventListener('click', () => {
 
 // === Export dengan Kode Akses ===
 exportVideoBtn.addEventListener('click', () => {
-  if (!video.src) {
-    alert('No video to export.');
+  if (!currentFile) {
+    alert('Upload dulu videonya!');
     return;
   }
   codeModal.style.display = 'flex';
@@ -138,69 +142,77 @@ submitCodeBtn.addEventListener('click', async () => {
         await downloadLoopedClip("looped-beta.mp4");
         betaUserUsed = true;
       } else {
-        alert("❌ Maaf, kode BETAUSER hanya bisa digunakan 1 kali.");
+        alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else {
-      alert("✅ Kode valid! Sekarang, rekam layar saat video looping:\n\n1. Mainkan video\n2. Gunakan screen recorder (OBS, QuickTime, dll)\n3. Simpan sebagai video baru\n\nFitur export otomatis akan datang di versi pro!");
+      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan video loop.");
     }
 
     accessCodeInput.value = '';
   } else {
-    alert("❌ Kode salah. Hubungi admin untuk mendapatkan akses.");
+    alert("❌ Kode salah. Hubungi admin untuk akses.");
   }
 });
 
-// === Fungsi: Potong & Download Video Sesuai Loop Range ===
+// === Fungsi: Potong & Download Sesuai Loop Range ===
 async function downloadLoopedClip(filename) {
   try {
-    // 1. Load FFmpeg jika belum
+    console.log("🚀 Memulai proses potong video...");
+
+    // Load FFmpeg jika belum
     if (!ffmpeg.isLoaded()) {
-      alert("Memuat FFmpeg... (hanya sekali pertama)");
+      alert("📥 Memuat FFmpeg... Tunggu sebentar (hanya sekali pertama)");
       await ffmpeg.load();
+      console.log("✅ FFmpeg berhasil dimuat");
     }
 
-    // 2. Ambil video dari URL object
-    const response = await fetch(video.src);
-    const videoBlob = await response.blob();
-    const arrayBuffer = await videoBlob.arrayBuffer();
+    if (!currentFile) throw new Error("Tidak ada file yang diupload");
 
-    // 3. Simpan ke filesystem FFmpeg
+    // Baca file asli
+    console.log("📄 Membaca file video...");
+    const arrayBuffer = await currentFile.arrayBuffer();
+
+    // Tulis ke FFmpeg FS
+    console.log("💾 Menulis ke sistem file FFmpeg...");
     ffmpeg.FS("writeFile", "input.mp4", new Uint8Array(arrayBuffer));
 
-    // 4. Hitung durasi potongan
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
 
-    // 5. Jalankan FFmpeg: potong tanpa re-encode (cepat)
+    if (duration <= 0) {
+      throw new Error("Durasi loop tidak valid");
+    }
+
+    console.log(`✂️ Memotong dari ${startSec}s, durasi ${duration}s`);
     await ffmpeg.run(
       "-i", "input.mp4",
       "-ss", startSec.toString(),
       "-t", duration.toString(),
-      "-c", "copy",  // copy stream, tidak encode ulang
+      "-c", "copy",
       "output.mp4"
     );
+    console.log("✅ Proses potong selesai");
 
-    // 6. Ambil file hasil
+    // Ambil hasil
     const data = ffmpeg.FS("readFile", "output.mp4");
-    const videoUrl = URL.createObjectURL(
-      new Blob([data.buffer], { type: "video/mp4" })
-    );
+    const blob = new Blob([data.buffer], { type: "video/mp4" });
+    const url = URL.createObjectURL(blob);
 
-    // 7. Trigger download
+    // Trigger download
     const a = document.createElement("a");
-    a.href = videoUrl;
+    a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
 
-    // 8. Bersihkan file di FS
+    // Bersihkan
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
 
-    alert(`✅ Video loop berhasil diunduh: ${filename}`);
+    alert(`🎉 Berhasil! ${filename} terdownload.`);
   } catch (err) {
-    console.error(err);
-    alert("❌ Gagal memproses video. Coba lagi.");
+    console.error("❌ ERROR: ", err);
+    alert("Gagal proses video:\n" + (err.message || "Error tidak diketahui"));
   }
-} 
+}
