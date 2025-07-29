@@ -1,0 +1,73 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LoopVid - Video Loop Tool</title>
+    <link rel="stylesheet" href="style.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/core@0.11.6/dist/core.min.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="logo">
+        <i class="fas fa-redo fa-lg"></i>
+        <h1>LevelLoop</h1>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#about">About</a></li>
+          <li><a href="#help">Help</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <section class="upload-section">
+        <h2>Upload Video untuk Loop</h2>
+        <div class="drop-zone" id="drop-zone">
+          <p>Drag & drop video di sini atau klik untuk upload</p>
+          <input type="file" id="file-input" accept="video/*" hidden />
+        </div>
+      </section>
+
+      <section class="controls-section" id="controls" style="display: none;">
+        <div class="time-controls">
+          <label>Start (mm:ss): <input type="text" id="start-time" value="00:05" /></label>
+          <label>End (mm:ss): <input type="text" id="end-time" value="00:15" /></label>
+          <button id="set-loop">Set Loop Range</button>
+          <button id="clear-loop">Clear Loop</button>
+        </div>
+
+        <div class="video-container">
+          <video id="video" controls></video>
+        </div>
+
+        <div class="action-buttons">
+          <button id="export-video"><i class="fas fa-download"></i> Export Loop (Pro)</button>
+          <button id="ai-suggest"><i class="fas fa-robot"></i> AI Suggest Loop</button>
+        </div>
+      </section><!-- Modal Kode Akses -->
+    <div class="modal" id="code-modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Masukkan Kode Akses</h3>
+        <p>Untuk meng-ekspor video, masukkan kode akses Anda.</p>
+        <input type="text" id="access-code" placeholder="Masukkan kode" />
+        <div class="modal-buttons">
+          <button id="cancel-code">Batal</button>
+          <button id="submit-code">Submit</button>
+        </div>
+      </div>
+    </div>
+    </main>
+
+
+
+    <footer>
+      <p>&copy; 2025 LevelLoop. Simple video loop tool.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+  </html>
