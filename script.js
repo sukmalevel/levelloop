@@ -1,5 +1,5 @@
 // Inisialisasi FFmpeg
-let { createFFmpeg, fetchFile } = FFmpeg;
+let { createFFmpeg } = FFmpeg;
 const ffmpeg = createFFmpeg({ log: true });
 
 // === DOM Elements ===
@@ -62,46 +62,40 @@ fileInput.addEventListener('change', (e) => {
   if (file) handleFile(file);
 });
 
-async function handleFile(file) {
+function handleFile(file) {
+  // Validasi: hanya .mp4
   if (!file.type.startsWith('video/')) {
-    alert('Please upload a valid video file.');
+    alert('Format tidak didukung. Harap upload video.');
     return;
   }
 
-  // Pastikan hanya .mp4
   if (!file.name.endsWith('.mp4')) {
-    alert('Only .mp4 files are supported.');
+    alert('Hanya file .mp4 yang didukung.');
     return;
   }
 
-  // Batasi ukuran video maksimal 50MB
+  // Batasi ukuran (max 50MB)
   if (file.size > 50 * 1024 * 1024) {
-    alert('Video terlalu besar. Silakan unggah video kurang dari 50MB.');
+    alert('Video terlalu besar. Maksimal 50MB.');
     return;
   }
 
-  currentFile = file; // Simpan file asli
+  currentFile = file;
   const url = URL.createObjectURL(file);
   video.src = url;
   controls.style.display = 'block';
-
-  // Tambahkan jeda 2 detik untuk memastikan file sepenuhnya tersedia
-  await new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
 // === Set Loop Range ===
 setLoopBtn.addEventListener('click', () => {
-  const startStr = startTimeInput.value;
-  const endStr = endTimeInput.value;
-
-  const [minS, secS] = startStr.split(':').map(Number);
-  const [minE, secE] = endStr.split(':').map(Number);
+  const [minS, secS] = startTimeInput.value.split(':').map(Number);
+  const [minE, secE] = endTimeInput.value.split(':').map(Number);
 
   loopStart = minS * 60 + secS;
   loopEnd = minE * 60 + secE;
 
   if (loopStart >= loopEnd) {
-    alert('Start time must be less than end time.');
+    alert('Waktu mulai harus lebih kecil dari waktu selesai.');
     return;
   }
 
@@ -122,11 +116,11 @@ clearLoopBtn.addEventListener('click', () => {
   loopEnd = 30;
 });
 
-// === AI Suggestion (mock) ===
+// === AI Suggestion ===
 aiSuggestBtn.addEventListener('click', () => {
-  alert("AI: Menganalisis video... (Fitur demo)");
   startTimeInput.value = '00:05';
   endTimeInput.value = '00:08';
+  alert("AI: Rentang loop disarankan");
 });
 
 // === Export dengan Kode Akses ===
@@ -160,77 +154,66 @@ submitCodeBtn.addEventListener('click', async () => {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else {
-      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan video loop.");
+      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
     }
 
     accessCodeInput.value = '';
   } else {
-    alert("❌ Kode salah. Hubungi admin untuk akses.");
+    alert("❌ Kode salah.");
   }
 });
 
-// === Fungsi: Potong & Download Sesuai Loop Range (dengan re-encode) ===
+// === Fungsi: Potong & Download (FIX untuk HP) ===
 async function downloadLoopedClip(filename) {
   try {
-    console.log("🚀 Mulai proses download...");
+    console.log("🚀 Mulai proses...");
 
-    // Load FFmpeg jika belum
     if (!ffmpeg.isLoaded()) {
-      alert("📥 Memuat FFmpeg... Tunggu sebentar (hanya sekali pertama)");
+      alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
       await ffmpeg.load();
-      console.log("✅ FFmpeg berhasil dimuat");
     }
 
-    if (!currentFile) throw new Error("Tidak ada file yang diupload");
+    if (!currentFile) throw new Error("Tidak ada file");
 
-    // Simpan file sementara menggunakan fetchFile
-    console.log("📄 Mengunduh file video...");
-    const tempFilePath = await fetchFile(currentFile);
+    // ✅ Baca file sebagai ArrayBuffer
+    const arrayBuffer = await currentFile.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Baca file sementara
-    console.log("💾 Menulis ke sistem file FFmpeg...");
-    ffmpeg.FS("writeFile", "input.mp4", ffmpeg.FS("readFile", tempFilePath));
-
-    // Debug: Cek apakah file berhasil dibaca
-    const inputFileContent = ffmpeg.FS("readFile", "input.mp4");
-    console.log("✅ File input berhasil dibaca:", inputFileContent.length, "bytes");
+    // ✅ Simpan ke FFmpeg FS
+    ffmpeg.FS("writeFile", "input.mp4", uint8Array);
 
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
 
-    if (duration <= 0) {
-      throw new Error("Durasi loop tidak valid");
-    }
+    if (duration <= 0) throw new Error("Durasi tidak valid");
 
-    console.log(`✂️ Memotong dari ${startSec}s, durasi ${duration}s`);
+    // ✅ Potong & re-encode ke format umum
     await ffmpeg.run(
       "-i", "input.mp4",
       "-ss", startSec.toString(),
       "-t", duration.toString(),
-      "-c:v", "libx264",        // Re-encode video ke H.264
-      "-crf", "23",             // Kualitas video (23 = standar)
-      "-preset", "fast",        // Kecepatan encode (fast, medium, slow)
-      "-c:a", "aac",            // Re-encode audio ke AAC
-      "-b:a", "128k",           // Bitrate audio
+      "-c:v", "libx264",
+      "-crf", "23",
+      "-preset", "fast",
+      "-c:a", "aac",
+      "-b:a", "128k",
       "output.mp4"
     );
-    console.log("✅ Proses encode dan potong selesai");
 
-    // Ambil hasil
+    // ✅ Ambil hasil
     const data = ffmpeg.FS("readFile", "output.mp4");
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
-    // 🔍 Cek apakah di HP
+    // 📱 HP: Tampilkan tombol manual
     const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
 
     if (isMobile) {
-      // 📱 HP: Tampilkan link manual
-      alert(`🎥 Video siap! Klik tombol di bawah untuk download.\n\nCatatan: Buka di Chrome untuk hasil terbaik.`);
+      alert("🎥 Video siap! Klik tombol di bawah untuk download.");
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
-      a.textContent = `⬇️ Download ${filename}`;
+      a.textContent = "⬇️ Download Sekarang";
       a.style.display = "block";
       a.style.margin = "20px auto";
       a.style.padding = "12px 20px";
@@ -241,22 +224,16 @@ async function downloadLoopedClip(filename) {
       a.style.maxWidth = "300px";
       a.style.borderRadius = "8px";
       a.style.textDecoration = "none";
-      a.target = "_blank"; // Untuk iOS
+      a.target = "_blank";
 
-      // Tambahkan ke modal atau atas video
       document.body.appendChild(a);
-
-      // Opsional: scroll ke tombol
       a.scrollIntoView({ behavior: "smooth" });
 
-      // Opsional: hilang setelah 30 detik
       setTimeout(() => {
-        if (document.body.contains(a)) {
-          document.body.removeChild(a);
-        }
+        if (document.body.contains(a)) document.body.removeChild(a);
       }, 30000);
     } else {
-      // 💻 Komputer: Download otomatis
+      // 💻 PC: Download otomatis
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -265,13 +242,13 @@ async function downloadLoopedClip(filename) {
       document.body.removeChild(a);
     }
 
-    // Bersihkan
+    // ✅ Bersihkan
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
 
-    console.log("✅ Download selesai");
+    console.log("✅ Sukses!");
   } catch (err) {
     console.error("❌ ERROR:", err);
-    alert("Gagal proses video:\n" + (err.message || "Error tidak diketahui"));
+    alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
