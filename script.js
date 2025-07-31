@@ -157,7 +157,7 @@ submitCodeBtn.addEventListener('click', async () => {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else if (code === "COBA") {
-      if (cobaUsageCount < 2) {
+      if (cobaUsageCount < 10) {
         cobaUsageCount++;
         localStorage.setItem('cobaUsageCount', cobaUsageCount);
         alert("✅ Kode valid! Tunggu proses download.");
