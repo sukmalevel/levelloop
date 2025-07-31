@@ -154,10 +154,12 @@ submitCodeBtn.addEventListener('click', async () => {
   }
 });
 
-// === Fungsi: Potong & Download Sesuai Loop Range ===
+// === Fungsi: Potong & Download Sesuai Loop Range (dengan re-encode) ===
 async function downloadLoopedClip(filename) {
   try {
     console.log("🚀 Mulai proses download...");
+
+    // Load FFmpeg jika belum
     if (!ffmpeg.isLoaded()) {
       alert("📥 Memuat FFmpeg... Tunggu sebentar (hanya sekali pertama)");
       await ffmpeg.load();
@@ -166,9 +168,11 @@ async function downloadLoopedClip(filename) {
 
     if (!currentFile) throw new Error("Tidak ada file yang diupload");
 
+    // Baca file asli
     console.log("📄 Membaca file video...");
     const arrayBuffer = await currentFile.arrayBuffer();
 
+    // Tulis ke FFmpeg FS
     console.log("💾 Menulis ke sistem file FFmpeg...");
     ffmpeg.FS("writeFile", "input.mp4", new Uint8Array(arrayBuffer));
 
@@ -184,26 +188,69 @@ async function downloadLoopedClip(filename) {
       "-i", "input.mp4",
       "-ss", startSec.toString(),
       "-t", duration.toString(),
-      "-c", "copy",
+      "-c:v", "libx264",        // Re-encode video ke H.264
+      "-crf", "23",             // Kualitas video (23 = standar)
+      "-preset", "fast",        // Kecepatan encode (fast, medium, slow)
+      "-c:a", "aac",            // Re-encode audio ke AAC
+      "-b:a", "128k",           // Bitrate audio
       "output.mp4"
     );
-    console.log("✅ Proses potong selesai");
+    console.log("✅ Proses encode dan potong selesai");
 
+    // Ambil hasil
     const data = ffmpeg.FS("readFile", "output.mp4");
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // 🔍 Cek apakah di HP
+    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
 
+    if (isMobile) {
+      // 📱 HP: Tampilkan link manual
+      alert(`🎥 Video siap! Klik tombol di bawah untuk download.\n\nCatatan: Buka di Chrome untuk hasil terbaik.`);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.textContent = `⬇️ Download ${filename}`;
+      a.style.display = "block";
+      a.style.margin = "20px auto";
+      a.style.padding = "12px 20px";
+      a.style.backgroundColor = "#27ae60";
+      a.style.color = "white";
+      a.style.textAlign = "center";
+      a.style.width = "80%";
+      a.style.maxWidth = "300px";
+      a.style.borderRadius = "8px";
+      a.style.textDecoration = "none";
+      a.target = "_blank"; // Untuk iOS
+
+      // Tambahkan ke modal atau atas video
+      document.body.appendChild(a);
+
+      // Opsional: scroll ke tombol
+      a.scrollIntoView({ behavior: "smooth" });
+
+      // Opsional: hilang setelah 30 detik
+      setTimeout(() => {
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+      }, 30000);
+    } else {
+      // 💻 Komputer: Download otomatis
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    // Bersihkan
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
 
-    alert(`🎉 Berhasil! ${filename} terdownload.`);
+    console.log("✅ Download selesai");
   } catch (err) {
     console.error("❌ ERROR:", err);
     alert("Gagal proses video:\n" + (err.message || "Error tidak diketahui"));
