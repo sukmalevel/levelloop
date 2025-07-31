@@ -26,7 +26,7 @@ let loopEnd = 15;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "TRYLOOP2025",
+  "COBA",
   "PRO2025",
   "BETAUSER",
   "LEVELLOOP"
@@ -37,6 +37,9 @@ let betaUserUsed = false;
 
 // === Simpan file asli saat upload ===
 let currentFile;
+
+// === Load usage count dari localStorage ===
+let freeUsageCount = parseInt(localStorage.getItem('freeUsageCount')) || 0;
 
 // === Drag & Drop Upload ===
 dropZone.addEventListener('click', () => fileInput.click());
@@ -152,6 +155,14 @@ submitCodeBtn.addEventListener('click', async () => {
         betaUserUsed = true;
       } else {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
+      }
+    } else if (code === "COBA") {
+      if (freeUsageCount < 11) {
+        freeUsageCount++;
+        localStorage.setItem('freeUsageCount', freeUsageCount);
+        await downloadLoopedClip("looped-free.mp4");
+      } else {
+        alert("🚫 Kuota download gratis sudah habis!\n\nHubungi admin untuk upgrade ke PRO atau dapatkan akses tambahan.");
       }
     } else {
       alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
