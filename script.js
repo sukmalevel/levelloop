@@ -68,11 +68,13 @@ async function handleFile(file) {
     return;
   }
 
+  // Pastikan hanya .mp4
   if (!file.name.endsWith('.mp4')) {
     alert('Only .mp4 files are supported.');
     return;
   }
 
+  // Batasi ukuran video maksimal 50MB
   if (file.size > 50 * 1024 * 1024) {
     alert('Video terlalu besar. Silakan unggah video kurang dari 50MB.');
     return;
@@ -83,8 +85,8 @@ async function handleFile(file) {
   video.src = url;
   controls.style.display = 'block';
 
-  // Tambahkan jeda 1 detik untuk memastikan file sepenuhnya tersedia
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Tambahkan jeda 2 detik untuk memastikan file sepenuhnya tersedia
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
 // === Set Loop Range ===
