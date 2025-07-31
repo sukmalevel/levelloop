@@ -62,9 +62,19 @@ fileInput.addEventListener('change', (e) => {
   if (file) handleFile(file);
 });
 
-function handleFile(file) {
+async function handleFile(file) {
   if (!file.type.startsWith('video/')) {
     alert('Please upload a valid video file.');
+    return;
+  }
+
+  if (!file.name.endsWith('.mp4')) {
+    alert('Only .mp4 files are supported.');
+    return;
+  }
+
+  if (file.size > 50 * 1024 * 1024) {
+    alert('Video terlalu besar. Silakan unggah video kurang dari 50MB.');
     return;
   }
 
@@ -72,6 +82,9 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   video.src = url;
   controls.style.display = 'block';
+
+  // Tambahkan jeda 1 detik untuk memastikan file sepenuhnya tersedia
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 
 // === Set Loop Range ===
@@ -175,6 +188,10 @@ async function downloadLoopedClip(filename) {
     // Baca file sementara
     console.log("💾 Menulis ke sistem file FFmpeg...");
     ffmpeg.FS("writeFile", "input.mp4", ffmpeg.FS("readFile", tempFilePath));
+
+    // Debug: Cek apakah file berhasil dibaca
+    const inputFileContent = ffmpeg.FS("readFile", "input.mp4");
+    console.log("✅ File input berhasil dibaca:", inputFileContent.length, "bytes");
 
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
