@@ -25,16 +25,48 @@
 
   <main>
     <section class="upload-section">
-      <h2>Video Loop Tools</h2>
+      <h2>Video Loop Tool</h2>
       <div class="drop-zone" id="drop-zone">
         <p>Drag & drop video di sini atau klik untuk upload</p>
         <input type="file" id="file-input" accept="video/*" hidden />
       </div>
     </section>
+
+    <section class="controls-section" id="controls" style="display: none;">
+      <div class="time-controls">
+        <label>Start (mm:ss): <input type="text" id="start-time" value="00:05" /></label>
+        <label>End (mm:ss): <input type="text" id="end-time" value="00:15" /></label>
+        <button id="set-loop">Set Loop Range</button>
+        <button id="clear-loop">Clear Loop</button>
+      </div>
+
+      <div class="video-container">
+        <video id="video" controls></video>
+      </div>
+
+      <div class="action-buttons">
+        <button id="export-video"><i class="fas fa-download"></i> Export Loop (Pro)</button>
+        <button id="ai-suggest"><i class="fas fa-robot"></i> AI Suggest Loop</button>
+      </div>
+    </section>
+
+    <!-- Modal Kode Akses -->
+    <div class="modal" id="code-modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Masukkan Kode Akses</h3>
+        <p>Untuk meng-ekspor video, masukkan kode akses Anda.</p>
+        <input type="text" id="access-code" placeholder="Masukkan kode" />
+        <div class="modal-buttons">
+          <button id="cancel-code">Batal</button>
+          <button id="submit-code">Submit</button>
+        </div>
+      </div>
+    </div>
   </main>
 
+  <!-- Footer diperbarui -->
   <footer>
-    <small>Ⓒ 2025 LevelLoop by BisaLeveling. Simple video loop tool.</small>
+    <p>&copy; 2025 LevelLoop by BisaLeveling. Simple video loop tool.</p>
     <p>
       <a href="https://instagram.com/bisaleveling" target="_blank" rel="noopener noreferrer">
         <i class="fab fa-instagram"></i> Follow us on Instagram
