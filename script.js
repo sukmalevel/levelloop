@@ -37,6 +37,7 @@ let betaUserUsed = false;
 
 // === Simpan file asli saat upload ===
 let currentFile;
+let inputFileBuffer; // Buffer file yang sudah dibaca
 
 // === Drag & Drop Upload ===
 dropZone.addEventListener('click', () => fileInput.click());
@@ -62,7 +63,7 @@ fileInput.addEventListener('change', (e) => {
   if (file) handleFile(file);
 });
 
-function handleFile(file) {
+async function handleFile(file) {
   // Validasi: hanya .mp4
   if (!file.type.startsWith('video/')) {
     alert('Format tidak didukung. Harap upload video.');
@@ -84,6 +85,26 @@ function handleFile(file) {
   const url = URL.createObjectURL(file);
   video.src = url;
   controls.style.display = 'block';
+
+  // Baca file sebagai ArrayBuffer dan simpan ke FFmpeg FS
+  try {
+    console.log("📄 Mengunduh file video...");
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // Simpan ke FFmpeg FS dengan nama tetap
+    ffmpeg.FS("writeFile", "input.mp4", uint8Array);
+
+    // Debug: Cek apakah file berhasil dibaca
+    const inputFileContent = ffmpeg.FS("readFile", "input.mp4");
+    console.log("✅ File input berhasil dibaca:", inputFileContent.length, "bytes");
+
+    // Simpan buffer file untuk digunakan nanti
+    inputFileBuffer = uint8Array;
+  } catch (err) {
+    console.error("❌ Gagal membaca file:", err);
+    alert("Gagal membaca file video.");
+  }
 }
 
 // === Set Loop Range ===
@@ -173,14 +194,12 @@ async function downloadLoopedClip(filename) {
       await ffmpeg.load();
     }
 
-    if (!currentFile) throw new Error("Tidak ada file");
+    if (!inputFileBuffer) throw new Error("Tidak ada file");
 
-    // ✅ Baca file sebagai ArrayBuffer
-    const arrayBuffer = await currentFile.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-
-    // ✅ Simpan ke FFmpeg FS
-    ffmpeg.FS("writeFile", "input.mp4", uint8Array);
+    // ✅ Simpan file ke FFmpeg FS jika belum ada
+    if (!ffmpeg.FS("exists", "input.mp4")) {
+      ffmpeg.FS("writeFile", "input.mp4", inputFileBuffer);
+    }
 
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
