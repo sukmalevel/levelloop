@@ -168,13 +168,13 @@ async function downloadLoopedClip(filename) {
 
     if (!currentFile) throw new Error("Tidak ada file yang diupload");
 
-    // Baca file asli
-    console.log("📄 Membaca file video...");
-    const arrayBuffer = await currentFile.arrayBuffer();
+    // Simpan file sementara menggunakan fetchFile
+    console.log("📄 Mengunduh file video...");
+    const tempFilePath = await fetchFile(currentFile);
 
-    // Tulis ke FFmpeg FS
+    // Baca file sementara
     console.log("💾 Menulis ke sistem file FFmpeg...");
-    ffmpeg.FS("writeFile", "input.mp4", new Uint8Array(arrayBuffer));
+    ffmpeg.FS("writeFile", "input.mp4", ffmpeg.FS("readFile", tempFilePath));
 
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
