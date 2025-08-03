@@ -26,9 +26,10 @@ let loopEnd = 15;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "COBA",  //  10x 
-  "PRO2025", // buy 
-  "LEVELLOOP" // 
+  "TRYLOOP2025",
+  "PRO2025",
+  "BETAUSER",
+  "LEVELLOOP"
 ];
 
 // === Tracking penggunaan kode BETAUSER ===
@@ -72,6 +73,7 @@ function handleFile(file) {
     alert('Hanya file .mp4 yang didukung.');
     return;
   }
+
   // Batasi ukuran (max 50MB)
   if (file.size > 50 * 1024 * 1024) {
     alert('Video terlalu besar. Maksimal 50MB.');
@@ -83,16 +85,6 @@ function handleFile(file) {
   video.src = url;
   controls.style.display = 'block';
 }
-
-//fungsi update kode COBA   
-function updateCobaDisplay() {
-  const el = document.getElementById('coba-count');
-  if (el) el.textContent = cobaUsageCount;
-}
-// Panggil saat halaman dimuat
-updateCobaDisplay();
-// Dan setelah pakai kode
-
 
 // === Set Loop Range ===
 setLoopBtn.addEventListener('click', () => {
@@ -131,9 +123,6 @@ aiSuggestBtn.addEventListener('click', () => {
   alert("AI: Rentang loop disarankan");
 });
 
-// === Tracking penggunaan kode COBA ===
-let cobaUsageCount = parseInt(localStorage.getItem('cobaUsageCount')) || 0;
-
 // === Export dengan Kode Akses ===
 exportVideoBtn.addEventListener('click', () => {
   if (!currentFile) {
@@ -164,18 +153,9 @@ submitCodeBtn.addEventListener('click', async () => {
       } else {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
-    } else if (code === "COBA") {
-	  if (cobaUsageCount < 10) {
-		cobaUsageCount++;
-		localStorage.setItem('cobaUsageCount', cobaUsageCount);
-		alert(`✅ Kode valid! (${cobaUsageCount}/10) - Sisa: ${10 - cobaUsageCount} kali`);
-		await downloadLoopedClip(`looped-coba-${cobaUsageCount}.mp4`);
-	  } else {
-		alert("❌ Kode COBA sudah habis. Hubungi admin untuk akses pro.");
-	  }
-	} else {
-	  alert("✅ Kode valid! Tunggu Proses Download Selesai");
-	}
+    } else {
+      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
+    }
 
     accessCodeInput.value = '';
   } else {
@@ -189,7 +169,7 @@ async function downloadLoopedClip(filename) {
     console.log("🚀 Mulai proses...");
 
     if (!ffmpeg.isLoaded()) {
-      alert("⏳ Memuat FFmpeg... (hanya sekali)");
+      alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
       await ffmpeg.load();
     }
 
