@@ -6,7 +6,8 @@
   <title>LevelLoop - Video Loop Tool</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js" defer></script>
+  <!-- Jangan gunakan defer jika langsung dipakai di script.js -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 </head>
 <body>
   <header>
@@ -31,10 +32,15 @@
       </div>
     </section>
 
+    <!-- Controls Section -->
     <section class="controls-section" id="controls" style="display: none;">
       <div class="time-controls">
-        <label>Start (mm:ss): <input type="text" id="start-time" value="00:05" /></label>
-        <label>End (mm:ss): <input type="text" id="end-time" value="00:15" /></label>
+        <label>Start (mm:ss): 
+          <input type="text" id="start-time" value="00:05" />
+        </label>
+        <label>End (mm:ss): 
+          <input type="text" id="end-time" value="00:15" />
+        </label>
         <button id="set-loop">Set Loop Range</button>
         <button id="clear-loop">Clear Loop</button>
       </div>
@@ -46,12 +52,6 @@
       <div class="action-buttons">
         <button id="export-video"><i class="fas fa-download"></i> Export Loop (Pro)</button>
         <button id="ai-suggest"><i class="fas fa-robot"></i> AI Suggest Loop</button>
-      </div>
-
-      <!-- Loading Indicator -->
-      <div id="loading" style="display: none; text-align: center; margin: 20px;">
-        <p>🎥 Memproses video... (jangan tutup halaman)</p>
-        <div class="spinner"></div>
       </div>
     </section>
 
@@ -80,6 +80,7 @@
     </p>
   </footer>
 
+  <!-- Script di akhir, setelah semua HTML -->
   <script src="script.js"></script>
 </body>
 </html>
