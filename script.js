@@ -1,16 +1,16 @@
-// Tunggu DOM dan FFmpeg siap
-document.addEventListener('DOMContentLoaded', async () => {
-  // Cek apakah FFmpeg dari CDN sudah tersedia
+// Tunggu window dan FFmpeg siap
+window.addEventListener('load', async () => {
+  // Cek apakah FFmpeg sudah tersedia
   if (typeof createFFmpeg === 'undefined') {
     alert('❌ FFmpeg gagal dimuat. Cek koneksi atau refresh halaman.');
-    console.error('FFmpeg tidak tersedia. Pastikan tidak ada spasi di URL.');
+    console.error('FFmpeg tidak tersedia. Pastikan script dari unpkg dimuat dulu.');
     return;
   }
 
   // Inisialisasi FFmpeg
   const ffmpeg = createFFmpeg({ log: true });
 
-  // Ambil semua elemen setelah DOM siap
+  // === DOM Elements ===
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const video = document.getElementById('video');
@@ -144,10 +144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   submitCodeBtn.addEventListener('click', async () => {
     const code = accessCodeInput.value.trim().toUpperCase();
-
     if (VALID_CODES.includes(code)) {
       codeModal.style.display = 'none';
-
       if (code === "PRO2025") {
         await downloadLoopedClip("looped-pro.mp4");
       } else if (code === "BETAUSER") {
@@ -160,7 +158,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
       }
-
       accessCodeInput.value = '';
     } else {
       alert("❌ Kode salah.");
@@ -171,7 +168,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function downloadLoopedClip(filename) {
     try {
       console.log("🚀 Mulai proses...");
-
       if (!ffmpeg.isLoaded()) {
         alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
         await ffmpeg.load();
