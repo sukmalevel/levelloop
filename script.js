@@ -1,13 +1,13 @@
 // Tunggu window dan FFmpeg siap
 window.addEventListener('load', async () => {
-  // Cek apakah FFmpeg sudah tersedia
+  // ✅ Cek apakah FFmpeg sudah tersedia
   if (typeof createFFmpeg === 'undefined') {
     alert('❌ FFmpeg gagal dimuat. Cek koneksi atau refresh halaman.');
-    console.error('FFmpeg tidak tersedia. Pastikan script dari unpkg dimuat dulu.');
+    console.error('FFmpeg tidak tersedia. Pastikan CDN benar dan tidak 404.');
     return;
   }
 
-  // Inisialisasi FFmpeg
+  // ✅ Inisialisasi FFmpeg
   const ffmpeg = createFFmpeg({ log: true });
 
   // === DOM Elements ===
@@ -70,7 +70,6 @@ window.addEventListener('load', async () => {
   });
 
   function handleFile(file) {
-    // Validasi: hanya .mp4
     if (!file.type.startsWith('video/')) {
       alert('Format tidak didukung. Harap upload video.');
       return;
@@ -79,7 +78,6 @@ window.addEventListener('load', async () => {
       alert('Hanya file .mp4 yang didukung.');
       return;
     }
-    // Batasi ukuran (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       alert('Video terlalu besar. Maksimal 50MB.');
       return;
@@ -168,6 +166,7 @@ window.addEventListener('load', async () => {
   async function downloadLoopedClip(filename) {
     try {
       console.log("🚀 Mulai proses...");
+
       if (!ffmpeg.isLoaded()) {
         alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
         await ffmpeg.load();
