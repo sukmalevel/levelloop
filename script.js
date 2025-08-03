@@ -26,10 +26,9 @@ let loopEnd = 05;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "TRYLOOP2025",
-  "PRO2025",
-  "BETAUSER",
-  "LEVELLOOP"
+  "COBA",  //  10x 
+  "PRO2025", // buy 
+  "LEVELLOOP" // 
 ];
 
 // === Tracking penggunaan kode BETAUSER ===
@@ -154,7 +153,7 @@ submitCodeBtn.addEventListener('click', async () => {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else {
-      alert("✅ Kode valid! Tunggu Proses Download Selesai");
+      alert("✅ Kode valid! Tunggu Proses Download Selesai.");
     }
 
     accessCodeInput.value = '';
@@ -169,7 +168,7 @@ async function downloadLoopedClip(filename) {
     console.log("🚀 Mulai proses...");
 
     if (!ffmpeg.isLoaded()) {
-      alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
+      alert("⏳ Memuat FFmpeg... (hanya sekali)");
       await ffmpeg.load();
     }
 
@@ -255,3 +254,4 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
+
