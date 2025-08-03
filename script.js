@@ -21,15 +21,14 @@ const cancelCodeBtn = document.getElementById('cancel-code');
 const submitCodeBtn = document.getElementById('submit-code');
 
 // === Loop Variables ===
-let loopStart = 5;
-let loopEnd = 15;
+let loopStart = 1;
+let loopEnd = 05;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "TRYLOOP2025",
-  "PRO2025",
-  "BETAUSER",
-  "LEVELLOOP"
+  "COBA",  //  10x 
+  "PRO2025", // buy 
+  "LEVELLOOP" // 
 ];
 
 // === Tracking penggunaan kode BETAUSER ===
@@ -154,7 +153,7 @@ submitCodeBtn.addEventListener('click', async () => {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else {
-      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
+      alert("✅ Kode valid! Tunggu Proses Download Selesai.");
     }
 
     accessCodeInput.value = '';
@@ -166,77 +165,56 @@ submitCodeBtn.addEventListener('click', async () => {
 // === Fungsi: Potong & Download (FIX untuk HP) ===
 async function downloadLoopedClip(filename) {
   try {
-    console.log("🚀 Mulai proses...");
-
     if (!ffmpeg.isLoaded()) {
-      alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
+      alert("⏳ Memuat FFmpeg...");
       await ffmpeg.load();
     }
 
     if (!currentFile) throw new Error("Tidak ada file");
 
-    // ✅ Baca file sebagai ArrayBuffer
     const arrayBuffer = await currentFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-
-    // ✅ Simpan ke FFmpeg FS
     ffmpeg.FS("writeFile", "input.mp4", uint8Array);
 
     const startSec = loopStart;
     const duration = loopEnd - loopStart;
 
-    if (duration <= 0) throw new Error("Durasi tidak valid");
-
-    // ✅ Potong & re-encode ke format umum
     await ffmpeg.run(
       "-i", "input.mp4",
-	  "-ss", startSec.toString(),
-	  "-t", duration.toString(),
-	  "-vf", "scale=480:-1",           //Turunkan resolusi
-	  "-c:v", "libx264",
-	  "-crf", "28",                    //Lebih cepat, sedikit turun kualitas
-	  "-preset", "ultrafast",          //Jauh lebih cepat dari "fast"
-	  "-tune", "fastdecode",           //Optimasi untuk video loop
-	  "-c:a", "aac",
-	  "-b:a", "64k",                   //Ringankan audio
-	  "-threads", "1",
-	  "output.mp4"
+      "-ss", startSec.toString(),
+      "-t", duration.toString(),
+      "-vf", "scale=480:-1",
+      "-c:v", "libx264",
+      "-crf", "28",
+      "-preset", "ultrafast",
+      "-tune", "fastdecode",
+      "-c:a", "aac",
+      "-b:a", "64k",
+      "-threads", "1",
+      "output.mp4"
     );
 
-    // ✅ Ambil hasil
     const data = ffmpeg.FS("readFile", "output.mp4");
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
-    // 📱 HP: Tampilkan tombol manual
     const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
 
     if (isMobile) {
-      alert("🎥 Video siap! Klik tombol di bawah untuk download.");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.textContent = "⬇️ Download Sekarang";
-      a.style.display = "block";
-      a.style.margin = "20px auto";
-      a.style.padding = "12px 20px";
-      a.style.backgroundColor = "#27ae60";
-      a.style.color = "white";
-      a.style.textAlign = "center";
-      a.style.width = "80%";
-      a.style.maxWidth = "300px";
-      a.style.borderRadius = "8px";
-      a.style.textDecoration = "none";
-      a.target = "_blank";
-
-      document.body.appendChild(a);
-      a.scrollIntoView({ behavior: "smooth" });
+      alert("🎥 Video siap! Klik tombol hijau untuk download.");
+      const downloadLink = document.getElementById("mobile-download");
+      downloadLink.href = url;
+      downloadLink.download = filename;
+      downloadLink.style.display = "block";
+      downloadLink.scrollIntoView({ behavior: "smooth" });
 
       setTimeout(() => {
-        if (document.body.contains(a)) document.body.removeChild(a);
+        if (downloadLink) {
+          downloadLink.style.display = "none";
+          downloadLink.href = "#";
+        }
       }, 30000);
     } else {
-      // 💻 PC: Download otomatis
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -245,11 +223,9 @@ async function downloadLoopedClip(filename) {
       document.body.removeChild(a);
     }
 
-    // ✅ Bersihkan
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
 
-    console.log("✅ Sukses!");
   } catch (err) {
     console.error("❌ ERROR:", err);
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
