@@ -1,6 +1,6 @@
 // Inisialisasi FFmpeg
-let { createFFmpeg } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: true });
+let { createFFmpeg } = window.FFmpeg;
+const ffmpeg = createFFmpeg({ log: false }); // log: false agar lebih cepat
 
 // === DOM Elements ===
 const dropZone = document.getElementById('drop-zone');
@@ -19,6 +19,9 @@ const codeModal = document.getElementById('code-modal');
 const accessCodeInput = document.getElementById('access-code');
 const cancelCodeBtn = document.getElementById('cancel-code');
 const submitCodeBtn = document.getElementById('submit-code');
+
+// === Loading & Feedback ===
+const loading = document.getElementById('loading');
 
 // === Loop Variables ===
 let loopStart = 5;
@@ -68,18 +71,15 @@ function handleFile(file) {
     alert('Format tidak didukung. Harap upload video.');
     return;
   }
-
   if (!file.name.endsWith('.mp4')) {
     alert('Hanya file .mp4 yang didukung.');
     return;
   }
-
   // Batasi ukuran (max 50MB)
   if (file.size > 50 * 1024 * 1024) {
     alert('Video terlalu besar. Maksimal 50MB.');
     return;
   }
-
   currentFile = file;
   const url = URL.createObjectURL(file);
   video.src = url;
@@ -90,6 +90,11 @@ function handleFile(file) {
 setLoopBtn.addEventListener('click', () => {
   const [minS, secS] = startTimeInput.value.split(':').map(Number);
   const [minE, secE] = endTimeInput.value.split(':').map(Number);
+
+  if (isNaN(minS) || isNaN(secS) || isNaN(minE) || isNaN(secE)) {
+    alert('Format waktu salah. Gunakan mm:ss');
+    return;
+  }
 
   loopStart = minS * 60 + secS;
   loopEnd = minE * 60 + secE;
@@ -110,17 +115,21 @@ video.addEventListener('timeupdate', () => {
 });
 
 clearLoopBtn.addEventListener('click', () => {
-  startTimeInput.value = '00:00';
-  endTimeInput.value = '00:30';
-  loopStart = 0;
-  loopEnd = 30;
+  startTimeInput.value = '00:05';
+  endTimeInput.value = '00:15';
+  loopStart = 5;
+  loopEnd = 15;
+  video.currentTime = loopStart;
 });
 
 // === AI Suggestion ===
 aiSuggestBtn.addEventListener('click', () => {
   startTimeInput.value = '00:05';
   endTimeInput.value = '00:08';
-  alert("AI: Rentang loop disarankan");
+  loopStart = 5;
+  loopEnd = 8;
+  video.currentTime = loopStart;
+  alert("🧠 AI: Rentang loop disarankan (5-8 detik)");
 });
 
 // === Export dengan Kode Akses ===
@@ -140,10 +149,8 @@ cancelCodeBtn.addEventListener('click', () => {
 
 submitCodeBtn.addEventListener('click', async () => {
   const code = accessCodeInput.value.trim().toUpperCase();
-
   if (VALID_CODES.includes(code)) {
     codeModal.style.display = 'none';
-
     if (code === "PRO2025") {
       await downloadLoopedClip("looped-pro.mp4");
     } else if (code === "BETAUSER") {
@@ -156,17 +163,16 @@ submitCodeBtn.addEventListener('click', async () => {
     } else {
       alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
     }
-
     accessCodeInput.value = '';
   } else {
-    alert("❌ Kode salah.");
+    alert("❌ Kode salah. Coba: TRYLOOP2025, PRO2025, BETAUSER");
   }
 });
 
-// === Fungsi: Potong & Download (FIX untuk HP) ===
+// === Fungsi: Potong & Download (Lebih Cepat di HP) ===
 async function downloadLoopedClip(filename) {
   try {
-    console.log("🚀 Mulai proses...");
+    loading.style.display = 'block';
 
     if (!ffmpeg.isLoaded()) {
       alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
@@ -175,11 +181,8 @@ async function downloadLoopedClip(filename) {
 
     if (!currentFile) throw new Error("Tidak ada file");
 
-    // ✅ Baca file sebagai ArrayBuffer
     const arrayBuffer = await currentFile.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-
-    // ✅ Simpan ke FFmpeg FS
     ffmpeg.FS("writeFile", "input.mp4", uint8Array);
 
     const startSec = loopStart;
@@ -187,29 +190,31 @@ async function downloadLoopedClip(filename) {
 
     if (duration <= 0) throw new Error("Durasi tidak valid");
 
-    // ✅ Potong & re-encode ke format umum
+    // 🔽 Optimasi untuk HP: cepat & ringan
     await ffmpeg.run(
       "-i", "input.mp4",
       "-ss", startSec.toString(),
       "-t", duration.toString(),
+      "-vf", "scale=480:-1",           // turunkan resolusi
       "-c:v", "libx264",
-      "-crf", "23",
-      "-preset", "fast",
+      "-crf", "28",                    // kualitas cukup, file kecil
+      "-preset", "ultrafast",          // ⚡ jauh lebih cepat
       "-c:a", "aac",
-      "-b:a", "128k",
+      "-b:a", "64k",                   // audio ringan
+      "-threads", "1",
       "output.mp4"
     );
 
-    // ✅ Ambil hasil
     const data = ffmpeg.FS("readFile", "output.mp4");
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
-    // 📱 HP: Tampilkan tombol manual
-    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
+    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+    // ✅ Notifikasi sukses
+    alert("✅ Video berhasil diproses! Klik tombol di bawah untuk download.");
 
     if (isMobile) {
-      alert("🎥 Video siap! Klik tombol di bawah untuk download.");
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -233,7 +238,6 @@ async function downloadLoopedClip(filename) {
         if (document.body.contains(a)) document.body.removeChild(a);
       }, 30000);
     } else {
-      // 💻 PC: Download otomatis
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -242,13 +246,21 @@ async function downloadLoopedClip(filename) {
       document.body.removeChild(a);
     }
 
-    // ✅ Bersihkan
+    // Bersihkan
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
+    URL.revokeObjectURL(url);
 
-    console.log("✅ Sukses!");
   } catch (err) {
     console.error("❌ ERROR:", err);
-    alert("Gagal proses video: " + (err.message || "Coba lagi"));
+    alert(
+      "Gagal proses video. Coba:\n" +
+      "1. Gunakan video pendek (<15 detik)\n" +
+      "2. Format .mp4\n" +
+      "3. Muat ulang halaman\n" +
+      "4. Gunakan WiFi"
+    );
+  } finally {
+    loading.style.display = 'none';
   }
 }
