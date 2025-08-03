@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LevelLoop - Video Loop Tool</title>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <!-- ✅ FFmpeg v0.12.4 tanpa spasi -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.4/dist/ffmpeg.min.js"></script>
 </head>
 <body>
@@ -50,6 +51,12 @@
       <div class="action-buttons">
         <button id="export-video"><i class="fas fa-download"></i> Export Loop (Pro)</button>
         <button id="ai-suggest"><i class="fas fa-robot"></i> AI Suggest Loop</button>
+      </div>
+
+      <!-- Loading Indicator -->
+      <div id="loading" style="display: none; text-align: center; margin: 20px;">
+        <p>🎥 Memproses video... (jangan tutup halaman)</p>
+        <div class="spinner"></div>
       </div>
     </section>
 
