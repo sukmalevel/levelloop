@@ -26,9 +26,9 @@ let loopEnd = 15;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "COBA",        // kode gratis, 10x pakai
-  "PRO2025",     // kode pro, unlimited
-  "BETAUSER",    // kode tester, 1x
+  "TRYLOOP2025",
+  "PRO2025",
+  "BETAUSER",
   "LEVELLOOP"
 ];
 
@@ -37,9 +37,6 @@ let betaUserUsed = false;
 
 // === Simpan file asli saat upload ===
 let currentFile;
-
-// === Load usage count dari localStorage (untuk kode COBA) ===
-let cobaUsageCount = parseInt(localStorage.getItem('cobaUsageCount')) || 0;
 
 // === Drag & Drop Upload ===
 dropZone.addEventListener('click', () => fileInput.click());
@@ -156,15 +153,6 @@ submitCodeBtn.addEventListener('click', async () => {
       } else {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
-    } else if (code === "COBA") {
-      if (cobaUsageCount < 10) {
-        cobaUsageCount++;
-        localStorage.setItem('cobaUsageCount', cobaUsageCount);
-        alert("✅ Kode valid! Tunggu proses download.");
-        await downloadLoopedClip(`looped-coba-${cobaUsageCount}.mp4`);
-      } else {
-        alert("❌ Kode COBA sudah expired. Hubungi admin untuk akses pro.");
-      }
     } else {
       alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
     }
@@ -264,3 +252,4 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
+
