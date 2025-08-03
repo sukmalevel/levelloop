@@ -190,14 +190,17 @@ async function downloadLoopedClip(filename) {
     // ✅ Potong & re-encode ke format umum
     await ffmpeg.run(
       "-i", "input.mp4",
-      "-ss", startSec.toString(),
-      "-t", duration.toString(),
-      "-c:v", "libx264",
-      "-crf", "23",
-      "-preset", "fast",
-      "-c:a", "aac",
-      "-b:a", "128k",
-      "output.mp4"
+	  "-ss", startSec.toString(),
+	  "-t", duration.toString(),
+	  "-vf", "scale=480:-1",           //Turunkan resolusi
+	  "-c:v", "libx264",
+	  "-crf", "28",                    //Lebih cepat, sedikit turun kualitas
+	  "-preset", "ultrafast",          //Jauh lebih cepat dari "fast"
+	  "-tune", "fastdecode",           //Optimasi untuk video loop
+	  "-c:a", "aac",
+	  "-b:a", "64k",                   //Ringankan audio
+	  "-threads", "1",
+	  "output.mp4"
     );
 
     // ✅ Ambil hasil
@@ -252,4 +255,3 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
-
