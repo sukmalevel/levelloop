@@ -6,7 +6,6 @@
   <title>LevelLoop - Video Loop Tool</title>
   <link rel="stylesheet" href="style.css"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  <!-- ✅ FFmpeg v0.11.6 tanpa spasi -->
   <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 </head>
 <body>
@@ -51,9 +50,10 @@
       <div class="action-buttons">
         <button id="export-video"><i class="fas fa-download"></i> Export Loop (Pro)</button>
         <button id="ai-suggest"><i class="fas fa-robot"></i> AI Suggest Loop</button>
+        <!-- ✅ Tombol download manual untuk HP -->
+        <a id="mobile-download" href="#" download style="display: none;">⬇️ Download Video</a>
       </div>
 
-      <!-- Loading Indicator -->
       <div id="loading" style="display: none; text-align: center; margin: 20px;">
         <p>🎥 Memproses video... (jangan tutup halaman)</p>
         <div class="spinner"></div>
@@ -79,8 +79,7 @@
     <p>
       <a href="https://instagram.com/bisaleveling" target="_blank" rel="noopener noreferrer">
         <i class="fab fa-instagram"></i> Follow us on Instagram
-      </a>
-      <br>
+      </a><br>
       <strong>File maksimal 50MB.</strong>
     </p>
   </footer>
