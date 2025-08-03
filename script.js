@@ -8,7 +8,7 @@ window.addEventListener('load', async () => {
   }
 
   // Inisialisasi FFmpeg
-  const ffmpeg = createFFmpeg({ log: false });
+  const ffmpeg = createFFmpeg({ log: true });
 
   // === DOM Elements ===
   const dropZone = document.getElementById('drop-zone');
@@ -288,3 +288,4 @@ window.addEventListener('load', async () => {
     }
   }
 });
+
