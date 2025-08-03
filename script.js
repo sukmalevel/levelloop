@@ -1,14 +1,15 @@
 // Tunggu window dan FFmpeg siap
-window.addEventListener('load', async () => {
+//window.addEventListener('load', async () => {
   // Cek apakah FFmpeg tersedia
-  if (typeof createFFmpeg === 'undefined') {
-    alert('❌ FFmpeg gagal dimuat. Cek koneksi atau refresh halaman.');
-    console.error('FFmpeg tidak tersedia. Pastikan CDN benar.');
-    return;
-  }
+  //if (typeof createFFmpeg === 'undefined') {
+    //alert('❌ FFmpeg gagal dimuat. Cek koneksi atau refresh halaman.');
+    //console.error('FFmpeg tidak tersedia. Pastikan CDN benar.');
+    //return;
+  //}/
 
   // Inisialisasi FFmpeg
-  const ffmpeg = createFFmpeg({ log: true });
+  let { createFFmpeg } = FFmpeg;
+  const ffmpeg = createFFmpeg({ log: true });  
 
   // === DOM Elements ===
   const dropZone = document.getElementById('drop-zone');
@@ -288,4 +289,5 @@ window.addEventListener('load', async () => {
     }
   }
 });
+
 
