@@ -3,14 +3,12 @@
   padding: 0;
   box-sizing: border-box;
 }
-
 body {
   font-family: 'Segoe UI', sans-serif;
   background-color: #f7f9fc;
   color: #333;
   line-height: 1.6;
 }
-
 header {
   background: #fff;
   padding: 1rem 2rem;
@@ -22,7 +20,6 @@ header {
   top: 0;
   z-index: 100;
 }
-
 .logo {
   display: flex;
   align-items: center;
@@ -30,35 +27,29 @@ header {
   font-weight: bold;
   color: #2c3e50;
 }
-
 .logo i {
   color: #3498db;
 }
-
 nav ul {
   display: flex;
   list-style: none;
   gap: 20px;
 }
-
 nav a {
   text-decoration: none;
   color: #555;
   font-size: 0.9rem;
 }
-
 main {
   max-width: 900px;
   margin: 2rem auto;
   padding: 0 1rem;
 }
-
 h2 {
   margin-bottom: 1.5rem;
   color: #2c3e50;
   text-align: center;
 }
-
 /* Drop Zone */
 .drop-zone {
   border: 3px dashed #3498db;
@@ -67,20 +58,16 @@ h2 {
   text-align: center;
   background-color: #ecf3fb;
   cursor: pointer;
-  touch-action: manipulation; /* Penting untuk HP */
   transition: all 0.3s;
 }
-
 .drop-zone:hover, .drop-zone.active {
   background-color: #d9edf7;
   border-color: #2980b9;
 }
-
 .drop-zone p {
   color: #555;
   font-size: 1.1rem;
 }
-
 /* Controls Section */
 .controls-section {
   margin-top: 2rem;
@@ -89,7 +76,6 @@ h2 {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
-
 .time-controls {
   display: flex;
   flex-wrap: wrap;
@@ -98,7 +84,6 @@ h2 {
   align-items: center;
   justify-content: center;
 }
-
 .time-controls input {
   width: 80px;
   padding: 8px;
@@ -106,7 +91,6 @@ h2 {
   border-radius: 6px;
   text-align: center;
 }
-
 .time-controls button {
   padding: 8px 16px;
   background: #3498db;
@@ -115,25 +99,20 @@ h2 {
   border-radius: 6px;
   cursor: pointer;
 }
-
 .time-controls button:hover {
   background: #2980b9;
 }
-
 /* Video Container */
 .video-container {
   margin: 1.5rem 0;
   text-align: center;
 }
-
 video {
   width: 100%;
   max-width: 640px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  background: #000;
 }
-
 /* Action Buttons */
 .action-buttons {
   display: flex;
@@ -141,7 +120,6 @@ video {
   justify-content: center;
   flex-wrap: wrap;
 }
-
 .action-buttons button {
   padding: 10px 20px;
   font-size: 1rem;
@@ -152,121 +130,20 @@ video {
   align-items: center;
   gap: 8px;
 }
-
 #export-video {
   background: #27ae60;
   color: white;
 }
-
 #export-video:hover {
   background: #219653;
 }
-
 #ai-suggest {
   background: #9b59b6;
   color: white;
 }
-
 #ai-suggest:hover {
   background: #8e44ad;
 }
-
-/* Loading Spinner */
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 10px auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Modal */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.7);
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal[style*="flex"] {
-  display: flex;
-}
-
-.modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.modal-content h3 {
-  margin-bottom: 0.5rem;
-  color: #2c3e50;
-}
-
-.modal-content p {
-  color: #7f8c8d;
-  margin-bottom: 1rem;
-}
-
-#access-code {
-  padding: 10px;
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.modal-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-
-.modal-buttons button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-#cancel-code {
-  background: #95a5a6;
-  color: white;
-}
-
-#cancel-code:hover {
-  background: #7f8c8d;
-}
-
-#submit-code {
-  background: #3498db;
-  color: white;
-}
-
-#submit-code:hover {
-  background: #2980b9;
-}
-
-/* Footer */
 footer {
   text-align: center;
   padding: 1.5rem;
@@ -274,27 +151,15 @@ footer {
   color: #7f8c8d;
   font-size: 0.9rem;
 }
-
-footer a {
-  color: #3498db;
-  text-decoration: none;
-}
-
-footer a:hover {
-  text-decoration: underline;
-}
-
 /* Responsive */
 @media (max-width: 600px) {
   header {
     flex-direction: column;
     gap: 10px;
   }
-
   .time-controls {
     flex-direction: column;
   }
-
   .action-buttons {
     flex-direction: column;
     align-items: center;
