@@ -153,7 +153,7 @@ submitCodeBtn.addEventListener('click', async () => {
         alert("❌ Kode BETAUSER hanya bisa digunakan 1 kali.");
       }
     } else {
-      alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
+      alert("✅ Kode valid! Tunggu Proses Download Selesai.");
     }
 
     accessCodeInput.value = '';
@@ -168,7 +168,7 @@ async function downloadLoopedClip(filename) {
     console.log("🚀 Mulai proses...");
 
     if (!ffmpeg.isLoaded()) {
-      alert("⏳ Memuat FFmpeg... (hanya sekali pertama)");
+      alert("⏳ Memuat FFmpeg... (hanya sekali)");
       await ffmpeg.load();
     }
 
@@ -254,4 +254,5 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
+
 
