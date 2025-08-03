@@ -67,6 +67,7 @@ h2 {
   text-align: center;
   background-color: #ecf3fb;
   cursor: pointer;
+  touch-action: manipulation; /* Penting untuk HP */
   transition: all 0.3s;
 }
 
@@ -130,6 +131,7 @@ video {
   max-width: 640px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #000;
 }
 
 /* Action Buttons */
@@ -169,12 +171,117 @@ video {
   background: #8e44ad;
 }
 
+/* Loading Spinner */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal[style*="flex"] {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+}
+
+.modal-content p {
+  color: #7f8c8d;
+  margin-bottom: 1rem;
+}
+
+#access-code {
+  padding: 10px;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.modal-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+#cancel-code {
+  background: #95a5a6;
+  color: white;
+}
+
+#cancel-code:hover {
+  background: #7f8c8d;
+}
+
+#submit-code {
+  background: #3498db;
+  color: white;
+}
+
+#submit-code:hover {
+  background: #2980b9;
+}
+
+/* Footer */
 footer {
   text-align: center;
   padding: 1.5rem;
   margin-top: 3rem;
   color: #7f8c8d;
   font-size: 0.9rem;
+}
+
+footer a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
 }
 
 /* Responsive */
