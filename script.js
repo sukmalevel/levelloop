@@ -26,10 +26,9 @@ let loopEnd = 15;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "TRYLOOP2025",
-  "PRO2025",
-  "BETAUSER",
-  "LEVELLOOP"
+  "COBA",  //  10x 
+  "PRO2025", // buy 
+  "LEVELLOOP" // 
 ];
 
 // === Tracking penggunaan kode BETAUSER ===
@@ -255,3 +254,4 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
+
