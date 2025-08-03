@@ -1,13 +1,16 @@
-// Tunggu DOM siap
-document.addEventListener('DOMContentLoaded', () => {
-  // Inisialisasi FFmpeg
+// Tunggu DOM dan FFmpeg siap
+document.addEventListener('DOMContentLoaded', async () => {
+  // Cek apakah FFmpeg dari CDN sudah tersedia
   if (typeof createFFmpeg === 'undefined') {
-    alert('FFmpeg gagal dimuat. Cek koneksi.');
+    alert('❌ FFmpeg gagal dimuat. Cek koneksi atau refresh halaman.');
+    console.error('FFmpeg tidak tersedia. Pastikan tidak ada spasi di URL.');
     return;
   }
-  const ffmpeg = createFFmpeg({ log: false });
 
-  // === DOM Elements ===
+  // Inisialisasi FFmpeg
+  const ffmpeg = createFFmpeg({ log: true });
+
+  // Ambil semua elemen setelah DOM siap
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file-input');
   const video = document.getElementById('video');
@@ -23,8 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const accessCodeInput = document.getElementById('access-code');
   const cancelCodeBtn = document.getElementById('cancel-code');
   const submitCodeBtn = document.getElementById('submit-code');
-
-  const loading = document.getElementById('loading');
 
   // === Loop Variables ===
   let loopStart = 5;
@@ -46,10 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // === Drag & Drop Upload ===
   dropZone.addEventListener('click', () => fileInput.click());
-  dropZone.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    fileInput.click();
-  });
 
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -73,8 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function handleFile(file) {
-    alert("🎥 Video terpilih, sedang dimuat...");
-
+    // Validasi: hanya .mp4
     if (!file.type.startsWith('video/')) {
       alert('Format tidak didukung. Harap upload video.');
       return;
@@ -83,11 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Hanya file .mp4 yang didukung.');
       return;
     }
+    // Batasi ukuran (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       alert('Video terlalu besar. Maksimal 50MB.');
       return;
     }
-
     currentFile = file;
     const url = URL.createObjectURL(file);
     video.src = url;
@@ -98,11 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setLoopBtn.addEventListener('click', () => {
     const [minS, secS] = startTimeInput.value.split(':').map(Number);
     const [minE, secE] = endTimeInput.value.split(':').map(Number);
-
-    if (isNaN(minS) || isNaN(secS) || isNaN(minE) || isNaN(secE)) {
-      alert('Format waktu salah. Gunakan mm:ss');
-      return;
-    }
 
     loopStart = minS * 60 + secS;
     loopEnd = minE * 60 + secE;
@@ -123,21 +114,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   clearLoopBtn.addEventListener('click', () => {
-    startTimeInput.value = '00:05';
-    endTimeInput.value = '00:15';
-    loopStart = 5;
-    loopEnd = 15;
-    video.currentTime = loopStart;
+    startTimeInput.value = '00:00';
+    endTimeInput.value = '00:30';
+    loopStart = 0;
+    loopEnd = 30;
   });
 
   // === AI Suggestion ===
   aiSuggestBtn.addEventListener('click', () => {
     startTimeInput.value = '00:05';
     endTimeInput.value = '00:08';
-    loopStart = 5;
-    loopEnd = 8;
-    video.currentTime = loopStart;
-    alert("🧠 AI: Rentang loop disarankan (5-8 detik)");
+    alert("AI: Rentang loop disarankan");
   });
 
   // === Export dengan Kode Akses ===
@@ -157,8 +144,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   submitCodeBtn.addEventListener('click', async () => {
     const code = accessCodeInput.value.trim().toUpperCase();
+
     if (VALID_CODES.includes(code)) {
       codeModal.style.display = 'none';
+
       if (code === "PRO2025") {
         await downloadLoopedClip("looped-pro.mp4");
       } else if (code === "BETAUSER") {
@@ -171,16 +160,16 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         alert("✅ Kode valid! Gunakan screen recorder untuk menyimpan.");
       }
+
       accessCodeInput.value = '';
     } else {
-      alert("❌ Kode salah. Coba: TRYLOOP2025, PRO2025, BETAUSER");
+      alert("❌ Kode salah.");
     }
   });
 
-  // === Fungsi: Potong & Download (Optimasi untuk HP) ===
+  // === Fungsi: Potong & Download ===
   async function downloadLoopedClip(filename) {
     try {
-      loading.style.display = 'block';
       console.log("🚀 Mulai proses...");
 
       if (!ffmpeg.isLoaded()) {
@@ -199,19 +188,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (duration <= 0) throw new Error("Durasi tidak valid");
 
-      // 🔽 Optimasi untuk HP: cepat & ringan
       await ffmpeg.run(
         "-i", "input.mp4",
         "-ss", startSec.toString(),
         "-t", duration.toString(),
-        "-vf", "scale=480:-1",
         "-c:v", "libx264",
-        "-crf", "28",
-        "-preset", "ultrafast",
-        "-tune", "fastdecode",
+        "-crf", "23",
+        "-preset", "fast",
         "-c:a", "aac",
-        "-b:a", "64k",
-        "-threads", "1",
+        "-b:a", "128k",
         "output.mp4"
       );
 
@@ -219,11 +204,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const blob = new Blob([data.buffer], { type: "video/mp4" });
       const url = URL.createObjectURL(blob);
 
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-
-      alert("✅ Video berhasil diproses! Klik tombol di bawah untuk download.");
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
 
       if (isMobile) {
+        alert("🎥 Video siap! Klik tombol di bawah untuk download.");
         const a = document.createElement("a");
         a.href = url;
         a.download = filename;
@@ -254,16 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(a);
       }
 
-      // Bersihkan
       ffmpeg.FS("unlink", "input.mp4");
       ffmpeg.FS("unlink", "output.mp4");
-      URL.revokeObjectURL(url);
 
+      console.log("✅ Sukses!");
     } catch (err) {
       console.error("❌ ERROR:", err);
       alert("Gagal proses video: " + (err.message || "Coba lagi"));
-    } finally {
-      loading.style.display = 'none';
     }
   }
 });
