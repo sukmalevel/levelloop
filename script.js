@@ -201,17 +201,32 @@ async function downloadLoopedClip(filename) {
 	  "-threads", "1",
 	  "output.mp4"
     );
+    
+    // ✅ Tambah penundaan sebelum membaca file INI BARU 2:24
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Delay 500ms
+
+    let data;
+    try {
+      data = ffmpeg.FS("readFile", "output.mp4");
+    } catch (err) {
+      console.error("Gagal baca output.mp4", err);
+      alert("Gagal baca file hasil. Coba lagi.");
+      return;
+    }
 
     // ✅ Ambil hasil
-    const data = ffmpeg.FS("readFile", "output.mp4");
+    //const data = ffmpeg.FS("readFile", "output.mp4");
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
     // 📱 HP: Tampilkan tombol manual
     const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
+	
+	// ✅ Notifikasi sukses
+    alert("✅ Video berhasil diproses! Klik tombol di bawah untuk download.");
 
     if (isMobile) {
-      alert("🎥 Video siap! Klik tombol di bawah untuk download.");
+      //alert("🎥 Video siap! Klik tombol di bawah untuk download.");
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -244,14 +259,14 @@ async function downloadLoopedClip(filename) {
       document.body.removeChild(a);
     }
 
-    // ✅ Bersihkan
+    // ✅ Bersihkan ada tambahan URL.revokeObjectURL(url);
     ffmpeg.FS("unlink", "input.mp4");
     ffmpeg.FS("unlink", "output.mp4");
-
-    console.log("✅ Sukses!");
+	URL.revokeObjectURL(url);
+	console.log("✅ Sukses!");
+	
   } catch (err) {
     console.error("❌ ERROR:", err);
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
-
