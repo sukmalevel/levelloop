@@ -13,6 +13,7 @@ const startTimeInput = document.getElementById('start-time');
 const endTimeInput = document.getElementById('end-time');
 const exportVideoBtn = document.getElementById('export-video');
 const aiSuggestBtn = document.getElementById('ai-suggest');
+const mobileDownloadBtn = document.getElementById('mobile-download'); // tombol manual download
 
 // === Modal Elements ===
 const codeModal = document.getElementById('code-modal');
@@ -22,13 +23,13 @@ const submitCodeBtn = document.getElementById('submit-code');
 
 // === Loop Variables ===
 let loopStart = 1;
-let loopEnd = 05;
+let loopEnd = 5;
 
 // === Daftar Kode Valid ===
 const VALID_CODES = [
-  "COBA",  //  10x 
-  "PRO2025", // buy 
-  "LEVELLOOP" // 
+  "COBA",      // 10x 
+  "PRO2025",   // buy 
+  "LEVELLOOP"  // 
 ];
 
 // === Tracking penggunaan kode BETAUSER ===
@@ -36,6 +37,7 @@ let betaUserUsed = false;
 
 // === Simpan file asli saat upload ===
 let currentFile;
+let lastBlobUrl = null; // untuk simpan URL video terakhir (HP)
 
 // === Drag & Drop Upload ===
 dropZone.addEventListener('click', () => fileInput.click());
@@ -162,7 +164,7 @@ submitCodeBtn.addEventListener('click', async () => {
   }
 });
 
-// === Fungsi: Potong & Download (FIX untuk HP) ===
+// === Fungsi: Potong & Download ===
 async function downloadLoopedClip(filename) {
   try {
     if (!ffmpeg.isLoaded()) {
@@ -198,22 +200,16 @@ async function downloadLoopedClip(filename) {
     const blob = new Blob([data.buffer], { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
+    lastBlobUrl = url; // simpan untuk mobile manual click
+
     const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/.test(navigator.userAgent);
 
     if (isMobile) {
       alert("🎥 Video siap! Klik tombol hijau untuk download.");
-      const downloadLink = document.getElementById("mobile-download");
-      downloadLink.href = url;
-      downloadLink.download = filename;
-      downloadLink.style.display = "block";
-      downloadLink.scrollIntoView({ behavior: "smooth" });
-
-      setTimeout(() => {
-        if (downloadLink) {
-          downloadLink.style.display = "none";
-          downloadLink.href = "#";
-        }
-      }, 30000);
+      mobileDownloadBtn.href = url;
+      mobileDownloadBtn.download = filename;
+      mobileDownloadBtn.style.display = "block";
+      mobileDownloadBtn.scrollIntoView({ behavior: "smooth" });
     } else {
       const a = document.createElement("a");
       a.href = url;
@@ -231,3 +227,11 @@ async function downloadLoopedClip(filename) {
     alert("Gagal proses video: " + (err.message || "Coba lagi"));
   }
 }
+
+// === Event listener untuk tombol manual di HP ===
+mobileDownloadBtn.addEventListener("click", (e) => {
+  if (!lastBlobUrl) {
+    e.preventDefault();
+    alert("⚠️ Tidak ada file untuk diunduh. Silakan proses video dulu.");
+  }
+});
