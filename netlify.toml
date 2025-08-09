@@ -1,5 +1,18 @@
+#[[headers]]
+#  for = "/*"
+#  [headers.values]
+#    Cross-Origin-Opener-Policy = "same-origin"
+#    Cross-Origin-Embedder-Policy = "require-corp"
+
+# WebAssembly FFmpeg di browser sekarang butuh izin CORS yang lebih ketat.
+#Cross-Origin-Resource-Policy = "cross-origin" → Mengizinkan resource (video) diakses dari origin berbeda, penting untuk WebAssembly.
+#Access-Control-Allow-Origin = "*" → Mengizinkan permintaan dari mana saja (supaya download bisa jalan walaupun file di-blob).
+#Tetap pertahankan COOP & COEP biar ffmpeg.js jalan di mode SharedArrayBuffer.
+
 [[headers]]
   for = "/*"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Resource-Policy = "cross-origin"
+    Access-Control-Allow-Origin = "*"
