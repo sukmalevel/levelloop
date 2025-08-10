@@ -188,29 +188,24 @@ async function waitForDownloadLink(job, tries=120, intervalMs=5000){
       showDebug(`uploadToSignedUrl OK`);
 
       // 3) minta pemotongan
-      const job = await requestCut(up.path, toMMSS(loopStart), toMMSS(loopEnd));
-      showDebug(`request-cut OK: output=${job.outputPath}`);
+     const dlUrl = await waitForDownloadLink(job);   // ← ambil signed download URL saat SUDAH ada
+showDebug(`download url siap`);
 
-      // 4) tunggu file siap
-      const ready = await waitUntilReady(job.outputSignedDownloadUrl);
-      if (!ready) throw new Error('Proses belum selesai atau gagal di server.');
-
-      // 5) download
-      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-      if (isMobile) {
-        alert("🎥 Video siap! Klik tombol hijau untuk download.");
-        mobileDownloadBtn.href = job.outputSignedDownloadUrl;
-        mobileDownloadBtn.download = filename;
-        mobileDownloadBtn.style.display = 'block';
-        mobileDownloadBtn.scrollIntoView({ behavior:'smooth' });
-      } else {
-        const a = document.createElement('a');
-        a.href = job.outputSignedDownloadUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
+const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+if (isMobile) {
+  alert("🎥 Video siap! Klik tombol hijau untuk download.");
+  mobileDownloadBtn.href = dlUrl;
+  mobileDownloadBtn.download = filename;
+  mobileDownloadBtn.style.display = 'block';
+  mobileDownloadBtn.scrollIntoView({ behavior:'smooth' });
+} else {
+  const a = document.createElement('a');
+  a.href = dlUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
     } catch (err){
       console.error("✖ ERROR (server export):", err);
       // Pesan user-friendly untuk bucket tidak ada
@@ -232,4 +227,5 @@ async function waitForDownloadLink(job, tries=120, intervalMs=5000){
     }
   });
 });
+
 
