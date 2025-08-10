@@ -1,13 +1,14 @@
 /*******************************************************
  * LevelLoop — Server mode (Supabase Edge + HF)
  * FINAL 2025-08-10
- * - Edge Functions: Verify JWT OFF, CORS '*'
- * - Bucket storage: videos (private)
+ * - Hasil download selalu "levelloop.mp4"
+ * - Tanpa panel log
+ * - Polling cepat 1.5s
  *******************************************************/
 document.addEventListener('DOMContentLoaded', () => {
   /* =============== CONFIG =============== */
-  const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co"; // ganti kalau beda
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // ganti punyamu
+  const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co"; // ganti kalau project beda
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_xxxxxxxxxxxxxxxxx"; // <-- ISI publishable key-mu
   const STORAGE_BUCKET = "videos";
 
   if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
@@ -22,26 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const setLoopBtn = $('#set-loop');
   const clearLoopBtn = $('#clear-loop');
   const startTimeInput = $('#start-time');
-  const endTimeInput = $('#end-time');
+  const endTimeInput   = $('#end-time');
   const exportVideoBtn = $('#export-video');
   const loadingEl = $('#loading');
   const mobileDownloadBtn = $('#mobile-download');
 
   /* =============== STATE =============== */
   let loopStart = 1, loopEnd = 5, currentFile = null;
-
-  /* =============== Debug panel =============== */
-  function showDebug(msg){
-    let el = $('#debug-log');
-    if (!el){
-      const pre = document.createElement('pre');
-      pre.id = 'debug-log';
-      pre.style.cssText = 'white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:8px;max-height:220px;overflow:auto;margin:12px;';
-      document.body.appendChild(pre);
-      el = pre;
-    }
-    el.textContent += `\n${new Date().toLocaleTimeString()}  ${msg}`;
-  }
 
   /* =============== Edge invoker (fetch only) =============== */
   async function invokeEdge(name, payload){
@@ -51,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
       body: JSON.stringify(payload)
     });
     const text = await resp.text();
-    showDebug(`[invoke:${name}] status ${resp.status} -> ${text.slice(0,300)}`);
     if (!resp.ok) throw new Error(text || `HTTP ${resp.status}`);
     return text ? JSON.parse(text) : {};
   }
@@ -74,9 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return await invokeEdge('request-cut', { path, start, end });
   }
 
-  // ← NEW: polling outputCheckUrl yang dikirim dari request-cut
-  async function waitForDownloadLink(job, tries=120, intervalMs=5000){
-    if (job.outputSignedDownloadUrl) return job.outputSignedDownloadUrl; // fallback kalau someday tersedia
+  // Poll check URL dari request-cut sampai link siap
+  async function waitForDownloadLink(job, tries = 180, intervalMs = 1500){
+    if (job.outputSignedDownloadUrl) return job.outputSignedDownloadUrl; // fallback jika tersedia
     const checkUrl = job.outputCheckUrl;
     for (let i=0; i<tries; i++){
       try{
@@ -86,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
           if (j.ready && j.url) return j.url;
         }
       }catch(_){}
-      await new Promise(res=>setTimeout(res, intervalMs));
+      await new Promise(res => setTimeout(res, intervalMs));
     }
     throw new Error('Timeout menunggu output siap.');
   }
@@ -106,12 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function handleFile(file){
-    if (!file.type.startsWith('video/')) { alert('Format tidak didukung. Harap upload video.'); return; }
+    if (!file.type.startsWith('video/'))   { alert('Format tidak didukung. Harap upload video.'); return; }
     if (!file.name.toLowerCase().endsWith('.mp4')) { alert('Hanya file .mp4 yang didukung.'); return; }
-    if (file.size > 50 * 1024 * 1024) { alert('Video terlalu besar. Maksimal 50MB.'); return; }
+    if (file.size > 50 * 1024 * 1024)      { alert('Video terlalu besar. Maksimal 50MB.'); return; }
     currentFile = file;
     const url = URL.createObjectURL(file);
-    if (video) video.src = url;
+    if (video)   video.src = url;
     if (controls) controls.style.display = 'block';
   }
 
@@ -125,7 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (loopStart >= loopEnd) return alert('Waktu mulai harus lebih kecil dari waktu selesai.');
     if (video){ video.currentTime = loopStart; video.play(); }
   });
-  video?.addEventListener('timeupdate', ()=>{ if (video.currentTime >= loopEnd) video.currentTime = loopStart; });
+
+  video?.addEventListener('timeupdate', ()=>{
+    if (video.currentTime >= loopEnd) video.currentTime = loopStart;
+  });
+
   clearLoopBtn?.addEventListener('click', ()=>{
     if (startTimeInput) startTimeInput.value = '00:00';
     if (endTimeInput)   endTimeInput.value   = '00:30';
@@ -135,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* =============== Export =============== */
   exportVideoBtn?.addEventListener('click', ()=>{
     if (!currentFile) return alert('Upload dulu videonya!');
-    exportViaServer('looped.mp4');
+    exportViaServer('levelloop.mp4'); // <-- nama fix
   });
 
   async function exportViaServer(filename){
@@ -146,21 +137,17 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileDownloadBtn.removeAttribute('href');
       mobileDownloadBtn.removeAttribute('download');
 
-      // 1) signed-upload
+      // 1) minta signed upload
       const up = await getSignedUpload(currentFile);
-      showDebug(`signed-upload OK: ${up.path}`);
 
-      // 2) upload ke storage
+      // 2) upload ke storage via token
       await uploadWithToken(up.path, up.token, currentFile, up.contentType);
-      showDebug(`uploadToSignedUrl OK`);
 
       // 3) minta proses cut
       const job = await requestCut(up.path, toMMSS(loopStart), toMMSS(loopEnd));
-      showDebug(`request-cut OK: output=${job.outputPath}`);
 
-      // 4) tunggu sampai link download tersedia
+      // 4) tunggu link download siap
       const dlUrl = await waitForDownloadLink(job);
-      showDebug(`download url siap`);
 
       // 5) download
       const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
@@ -186,6 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Guard tombol download HP
   mobileDownloadBtn?.addEventListener('click', (e)=>{
     if (!mobileDownloadBtn.href) {
       e.preventDefault();
