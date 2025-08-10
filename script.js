@@ -5,7 +5,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   /* ==================== SUPABASE CONFIG ==================== */
   const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co";   // ganti punyamu kalau beda
-  const SUPABASE_ANON_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk";                       // <-- isi anon key
+  const SUPABASE_ANON_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk";   
 
   if (!window.supabase) {
     alert("Supabase SDK belum dimuat. Tambahkan CDN supabase-js di index.html");
@@ -95,34 +95,38 @@ document.addEventListener('DOMContentLoaded', () => {
     el.textContent += `\n${new Date().toLocaleTimeString()}  ${msg}`;
   }
 
-  /* ==================== EDGE INVOKER (SDK → fallback fetch) ==================== */
-  async function invokeEdge(name, payload) {
-    try {
-      const { data, error } = await sb.functions.invoke(name, { body: payload });
-      if (error) throw error;
-      return data;
-    } catch (e1) {
-      showDebug(`[invoke:${name}] SDK gagal: ${e1?.message || e1}`);
-      try {
-        const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'apikey': SUPABASE_ANON_KEY
-          },
-          body: JSON.stringify(payload)
-        });
-        const text = await resp.text();
-        showDebug(`[invoke:${name}] Fallback status ${resp.status} -> ${text.slice(0,300)}`);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
-        return text ? JSON.parse(text) : {};
-      } catch (e2) {
-        showDebug(`[invoke:${name}] Fallback gagal: ${e2?.message || e2}`);
-        throw e2;
-      }
-    }
+  // Ganti fungsi invokeEdge jadi begini:
+async function invokeEdge(name, payload) {
+  const baseHeaders = {
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,   // publishable
+    'apikey': SUPABASE_ANON_KEY,
+    'Content-Type': 'application/json'
+  };
+
+  // 1) Coba via SDK tapi pakai headers kita
+  try {
+    const { data, error } = await sb.functions.invoke(name, {
+      body: payload,
+      headers: baseHeaders
+    });
+    if (error) throw error;
+    return data;
+  } catch (e1) {
+    showDebug(`[invoke:${name}] SDK gagal: ${e1?.message || e1}`);
   }
+
+  // 2) Fallback fetch manual (headers sama)
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: baseHeaders,
+    body: JSON.stringify(payload)
+  });
+  const text = await resp.text();
+  showDebug(`[invoke:${name}] Fallback status ${resp.status} -> ${text.slice(0,300)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
+  return text ? JSON.parse(text) : {};
+}
+
 
   /* ==================== SUPABASE HELPERS ==================== */
   async function getSignedUpload(file) {
@@ -261,4 +265,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
