@@ -1,77 +1,49 @@
 /*******************************************************
  * LevelLoop — Server mode (Supabase Edge + HF)
- * Patch 2025-08-10 — aman untuk HP RAM kecil
- * Catatan penting:
- *  - Pastikan di Supabase Storage ADA bucket bernama persis: videos (private)
- *  - Edge Functions: signed-upload & request-cut -> Verify JWT = OFF
+ * FINAL 2025-08-10
+ * - Edge Functions: Verify JWT OFF, CORS '*'
+ * - Bucket storage: videos (private)
  *******************************************************/
 document.addEventListener('DOMContentLoaded', () => {
-  /* ===================== CONFIG ===================== */
-  // TODO: ganti ke Project URL kamu
-  const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co";
-
-  // TODO: Publishable key (boleh kosong karena kita pakai fetch-only untuk functions,
-  // tapi DIPAKAI untuk uploadToSignedUrl via SDK storage).
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // <- ganti
-
-  // Nama bucket di Supabase Storage (HARUS ADA)
+  /* =============== CONFIG =============== */
+  const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co"; // ganti kalau beda
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // ganti punyamu
   const STORAGE_BUCKET = "videos";
 
-  /* ================== Inisialisasi SDK ================= */
   if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-  /* ================== Helper DOM ================== */
+  /* =============== DOM =============== */
   const $ = (sel) => document.querySelector(sel);
-  const ensure = (sel, create) => { let el=$(sel); if(!el && create){el=create();} return el; };
-
   const dropZone = $('#drop-zone');
   const fileInput = $('#file-input');
-  const video = ensure('#video', () => {
-    const v = document.createElement('video'); v.id='video'; v.controls=true; document.body.appendChild(v); return v;
-  });
-  const controls = ensure('#controls');
+  const video = $('#video');
+  const controls = $('#controls');
   const setLoopBtn = $('#set-loop');
   const clearLoopBtn = $('#clear-loop');
   const startTimeInput = $('#start-time');
   const endTimeInput = $('#end-time');
   const exportVideoBtn = $('#export-video');
+  const loadingEl = $('#loading');
+  const mobileDownloadBtn = $('#mobile-download');
 
-  let mobileDownloadBtn = $('#mobile-download');
-  if (!mobileDownloadBtn) {
-    mobileDownloadBtn = document.createElement('a');
-    mobileDownloadBtn.id = 'mobile-download';
-    mobileDownloadBtn.textContent = '⬇️ Download Video';
-    mobileDownloadBtn.style.display = 'none';
-    mobileDownloadBtn.setAttribute('download','');
-    document.body.appendChild(mobileDownloadBtn);
-  }
-
-  let loadingEl = $('#loading');
-  if (!loadingEl) {
-    loadingEl = document.createElement('div');
-    loadingEl.id = 'loading';
-    loadingEl.style.cssText = 'display:none;text-align:center;margin:20px 0;';
-    loadingEl.innerHTML = `<p>🎥 Memproses video di server... (jangan tutup halaman)</p><div class="spinner"></div>`;
-    document.body.appendChild(loadingEl);
-  }
-
-  /* ====================== STATE ======================= */
+  /* =============== STATE =============== */
   let loopStart = 1, loopEnd = 5, currentFile = null;
 
-  /* =================== Debug panel ==================== */
+  /* =============== Debug panel =============== */
   function showDebug(msg){
     let el = $('#debug-log');
-    if (!el) {
-      el = document.createElement('pre');
-      el.id = 'debug-log';
-      el.style.cssText = 'white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:8px;max-height:220px;overflow:auto;margin:12px;';
-      document.body.appendChild(el);
+    if (!el){
+      const pre = document.createElement('pre');
+      pre.id = 'debug-log';
+      pre.style.cssText = 'white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:8px;max-height:220px;overflow:auto;margin:12px;';
+      document.body.appendChild(pre);
+      el = pre;
     }
     el.textContent += `\n${new Date().toLocaleTimeString()}  ${msg}`;
   }
 
-  /* ===== EDGE INVOKER: fetch-only (JWT OFF) ===== */
+  /* =============== Edge invoker (fetch only) =============== */
   async function invokeEdge(name, payload){
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
       method: 'POST',
@@ -80,61 +52,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     const text = await resp.text();
     showDebug(`[invoke:${name}] status ${resp.status} -> ${text.slice(0,300)}`);
-    if (!resp.ok) {
-      // Bikin pesan ramah user untuk error storage 400/404
-      if (/related resource does not exist/i.test(text)) {
-        throw new Error("Storage bucket/path belum ada. Pastikan bucket bernama 'videos' sudah dibuat (private).");
-      }
-      if (/invalid_json_body/i.test(text)) {
-        throw new Error("Body yang dikirim ke Edge Function bukan JSON. Cek versi fungsi & deploy ulang.");
-      }
-      throw new Error(`HTTP ${resp.status} ${text}`);
-    }
+    if (!resp.ok) throw new Error(text || `HTTP ${resp.status}`);
     return text ? JSON.parse(text) : {};
   }
 
-  /* =================== Helper Supabase =================== */
+  /* =============== Helpers =============== */
   async function getSignedUpload(file){
     return await invokeEdge('signed-upload', {
       filename: file.name,
       contentType: file.type || 'video/mp4'
     });
   }
+
   async function uploadWithToken(path, token, file, contentType){
     const { error } = await sb.storage.from(STORAGE_BUCKET)
       .uploadToSignedUrl(path, token, file, { contentType });
     if (error) throw new Error(error.message || 'uploadToSignedUrl failed');
   }
+
   async function requestCut(path, start, end){
     return await invokeEdge('request-cut', { path, start, end });
   }
-// Poll ke outputCheckUrl (GET). Jika ready -> ambil signed download URL dari JSON.
-async function waitForDownloadLink(job, tries=120, intervalMs=5000){
-  if (job.outputSignedDownloadUrl) return job.outputSignedDownloadUrl; // kompatibel kalau suatu saat tersedia
-  const checkUrl = job.outputCheckUrl;
-  for (let i=0; i<tries; i++){
-    try {
-      const r = await fetch(checkUrl, { cache: 'no-store' });
-      if (r.ok) {
-        const j = await r.json();
-        if (j.ready && j.url) return j.url;
-      }
-    } catch (_) {}
-    await new Promise(res => setTimeout(res, intervalMs));
+
+  // ← NEW: polling outputCheckUrl yang dikirim dari request-cut
+  async function waitForDownloadLink(job, tries=120, intervalMs=5000){
+    if (job.outputSignedDownloadUrl) return job.outputSignedDownloadUrl; // fallback kalau someday tersedia
+    const checkUrl = job.outputCheckUrl;
+    for (let i=0; i<tries; i++){
+      try{
+        const r = await fetch(checkUrl, { cache: 'no-store' });
+        if (r.ok) {
+          const j = await r.json();
+          if (j.ready && j.url) return j.url;
+        }
+      }catch(_){}
+      await new Promise(res=>setTimeout(res, intervalMs));
+    }
+    throw new Error('Timeout menunggu output siap.');
   }
-  throw new Error('Timeout menunggu output siap.');
-}
+
   const toMMSS = (sec)=>`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(Math.floor(sec%60)).padStart(2,'0')}`;
 
-  /* =================== Upload UI =================== */
-  if (dropZone) dropZone.addEventListener('click', ()=> fileInput?.click());
-  if (dropZone) dropZone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('active'); });
-  if (dropZone) dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('active'));
-  if (dropZone) dropZone.addEventListener('drop', (e)=>{
+  /* =============== Upload UI =============== */
+  dropZone?.addEventListener('click', ()=> fileInput?.click());
+  dropZone?.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('active'); });
+  dropZone?.addEventListener('dragleave', ()=> dropZone.classList.remove('active'));
+  dropZone?.addEventListener('drop', (e)=>{
     e.preventDefault(); dropZone.classList.remove('active');
     const f = e.dataTransfer.files?.[0]; if (f) handleFile(f);
   });
-  if (fileInput) fileInput.addEventListener('change', (e)=>{
+  fileInput?.addEventListener('change', (e)=>{
     const f = e.target.files?.[0]; if (f) handleFile(f);
   });
 
@@ -148,25 +115,25 @@ async function waitForDownloadLink(job, tries=120, intervalMs=5000){
     if (controls) controls.style.display = 'block';
   }
 
-  /* =================== Loop preview =================== */
-  if (setLoopBtn) setLoopBtn.addEventListener('click', ()=>{
+  /* =============== Loop preview =============== */
+  setLoopBtn?.addEventListener('click', ()=>{
     const [mS,sS] = (startTimeInput?.value || '00:01').split(':').map(n=>parseInt(n||'0',10));
     const [mE,sE] = (endTimeInput?.value   || '00:05').split(':').map(n=>parseInt(n||'0',10));
     loopStart = mS*60 + sS;
     loopEnd   = mE*60 + sE;
-    if (!(isFinite(loopStart) && isFinite(loopEnd))) return alert('Format waktu tidak valid (mm:ss).');
+    if (!(isFinite(loopStart)&&isFinite(loopEnd))) return alert('Format waktu tidak valid (mm:ss).');
     if (loopStart >= loopEnd) return alert('Waktu mulai harus lebih kecil dari waktu selesai.');
     if (video){ video.currentTime = loopStart; video.play(); }
   });
-  if (video) video.addEventListener('timeupdate', ()=>{ if (video.currentTime >= loopEnd) video.currentTime = loopStart; });
-  if (clearLoopBtn) clearLoopBtn.addEventListener('click', ()=>{
+  video?.addEventListener('timeupdate', ()=>{ if (video.currentTime >= loopEnd) video.currentTime = loopStart; });
+  clearLoopBtn?.addEventListener('click', ()=>{
     if (startTimeInput) startTimeInput.value = '00:00';
     if (endTimeInput)   endTimeInput.value   = '00:30';
     loopStart = 0; loopEnd = 30;
   });
 
-  /* ==================== Export ==================== */
-  if (exportVideoBtn) exportVideoBtn.addEventListener('click', ()=>{
+  /* =============== Export =============== */
+  exportVideoBtn?.addEventListener('click', ()=>{
     if (!currentFile) return alert('Upload dulu videonya!');
     exportViaServer('looped.mp4');
   });
@@ -179,53 +146,50 @@ async function waitForDownloadLink(job, tries=120, intervalMs=5000){
       mobileDownloadBtn.removeAttribute('href');
       mobileDownloadBtn.removeAttribute('download');
 
-      // 1) mintakan signed upload dari Edge
+      // 1) signed-upload
       const up = await getSignedUpload(currentFile);
       showDebug(`signed-upload OK: ${up.path}`);
 
-      // 2) upload file ke Storage via signed token
+      // 2) upload ke storage
       await uploadWithToken(up.path, up.token, currentFile, up.contentType);
       showDebug(`uploadToSignedUrl OK`);
 
-      // 3) minta pemotongan
-     const dlUrl = await waitForDownloadLink(job);   // ← ambil signed download URL saat SUDAH ada
-showDebug(`download url siap`);
+      // 3) minta proses cut
+      const job = await requestCut(up.path, toMMSS(loopStart), toMMSS(loopEnd));
+      showDebug(`request-cut OK: output=${job.outputPath}`);
 
-const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
-if (isMobile) {
-  alert("🎥 Video siap! Klik tombol hijau untuk download.");
-  mobileDownloadBtn.href = dlUrl;
-  mobileDownloadBtn.download = filename;
-  mobileDownloadBtn.style.display = 'block';
-  mobileDownloadBtn.scrollIntoView({ behavior:'smooth' });
-} else {
-  const a = document.createElement('a');
-  a.href = dlUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
+      // 4) tunggu sampai link download tersedia
+      const dlUrl = await waitForDownloadLink(job);
+      showDebug(`download url siap`);
+
+      // 5) download
+      const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+      if (isMobile) {
+        alert("🎥 Video siap! Klik tombol hijau untuk download.");
+        mobileDownloadBtn.href = dlUrl;
+        mobileDownloadBtn.download = filename;
+        mobileDownloadBtn.style.display = 'block';
+        mobileDownloadBtn.scrollIntoView({ behavior:'smooth' });
+      } else {
+        const a = document.createElement('a');
+        a.href = dlUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (err){
       console.error("✖ ERROR (server export):", err);
-      // Pesan user-friendly untuk bucket tidak ada
-      if (String(err.message || err).includes("bucket") || String(err).includes("related resource")) {
-        alert("Gagal: Bucket Storage 'videos' belum ada / salah nama. Buka Supabase → Storage → Create bucket: videos (private).");
-      } else {
-        alert("Gagal memproses: " + (err.message || err));
-      }
+      alert("Gagal memproses: " + (err.message || err));
     } finally {
       loadingEl.style.display = 'none';
     }
   }
 
-  // Guard tombol download HP
-  mobileDownloadBtn.addEventListener('click', (e)=>{
+  mobileDownloadBtn?.addEventListener('click', (e)=>{
     if (!mobileDownloadBtn.href) {
       e.preventDefault();
       alert("⚠️ Tidak ada file untuk diunduh. Silakan proses video dulu.");
     }
   });
 });
-
-
