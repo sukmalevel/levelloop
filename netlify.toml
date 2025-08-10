@@ -9,10 +9,21 @@
 #Access-Control-Allow-Origin = "*" → Mengizinkan permintaan dari mana saja (supaya download bisa jalan walaupun file di-blob).
 #Tetap pertahankan COOP & COEP biar ffmpeg.js jalan di mode SharedArrayBuffer.
 
+#ini versi tidak wajib lagi 
+#[[headers]]
+#  for = "/*"
+#  [headers.values]
+#    Cross-Origin-Opener-Policy = "same-origin"
+#    Cross-Origin-Embedder-Policy = "require-corp"
+#    Cross-Origin-Resource-Policy = "cross-origin"
+#    Access-Control-Allow-Origin = "*"
+
+#versi terbaru 10/8/25
+[build]
+  publish = "."
+  command = ""
+
 [[headers]]
   for = "/*"
   [headers.values]
-    Cross-Origin-Opener-Policy = "same-origin"
-    Cross-Origin-Embedder-Policy = "require-corp"
-    Cross-Origin-Resource-Policy = "cross-origin"
     Access-Control-Allow-Origin = "*"
