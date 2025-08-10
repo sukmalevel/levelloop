@@ -6,9 +6,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // === SUPABASE CONFIG (pakai Publishable key, prefix sb_publishable_) ===
   const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // <- ganti
-  if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log("[supabase key prefix]", SUPABASE_ANON_KEY.slice(0,16)); // harus sb_publishable_
+  
+  // Jika kosong, fallback tidak akan dicoba.
+  const SUPABASE_LEGACY_ANON_JWT = ""; // isi kalau mau fallback
+
+	if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
+	const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+	console.log("[supabase key prefix]", SUPABASE_PUBLISHABLE_KEY.slice(0,16)); // harus sb_publishable_
 
   // === DOM safe helpers ===
   const $ = (sel) => document.querySelector(sel);
@@ -52,27 +56,57 @@ document.addEventListener('DOMContentLoaded', () => {
     el.textContent += `\n${new Date().toLocaleTimeString()}  ${msg}`;
   }
 
-  // === EDGE INVOKER (SDK w/headers → fallback fetch) ===
-  async function invokeEdge(name, payload){
-    const baseHeaders={
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      "apikey": SUPABASE_ANON_KEY,
-      "Content-Type": "application/json"
-    };
-    try{
-      const {data,error}=await sb.functions.invoke(name,{body:payload,headers:baseHeaders});
-      if(error) throw error; return data;
-    }catch(e1){
-      showDebug(`[invoke:${name}] SDK gagal: ${e1?.message||e1}`);
-      const resp=await fetch(`${SUPABASE_URL}/functions/v1/${name}`,{
-        method:'POST', headers:baseHeaders, body:JSON.stringify(payload)
-      });
-      const text=await resp.text();
-      showDebug(`[invoke:${name}] Fallback status ${resp.status} -> ${text.slice(0,300)}`);
-      if(!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
-      return text?JSON.parse(text):{};
+  // === EDGE INVOKER: SDK (publishable) → fallback fetch (publishable) → fallback (legacy JWT) ===
+async function invokeEdge(name, payload){
+  // helper untuk kirim dengan header tertentu
+  const callWithHeaders = async (headers, phase) => {
+    // Coba via SDK (bawa header juga)
+    try {
+      const { data, error } = await sb.functions.invoke(name, { body: payload, headers });
+      if (error) throw error;
+      return data;
+    } catch (e1) {
+      showDebug(`[invoke:${name}] SDK(${phase}) gagal: ${e1?.message || e1}`);
     }
+    // Fallback fetch langsung
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+    const text = await resp.text();
+    showDebug(`[invoke:${name}] Fallback(${phase}) status ${resp.status} -> ${text.slice(0,300)}`);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
+    return text ? JSON.parse(text) : {};
+  };
+
+  // 1) Coba dengan PUBLISHABLE key (API baru)
+  const pubHeaders = {
+    "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+    "apikey": SUPABASE_PUBLISHABLE_KEY,
+    "Content-Type": "application/json"
+  };
+  try {
+    return await callWithHeaders(pubHeaders, "publishable");
+  } catch (e) {
+    // Kalau errornya 401/Invalid JWT dan kita punya legacy, coba ulang
+    const msg = String(e.message || e);
+    const shouldRetryWithLegacy = SUPABASE_LEGACY_ANON_JWT && (
+      /401/.test(msg) || /Invalid JWT/i.test(msg)
+    );
+    if (!shouldRetryWithLegacy) throw e;
+    showDebug(`[invoke:${name}] Retry dengan legacy anon JWT`);
   }
+
+  // 2) Retry dengan LEGACY ANON JWT (kalau disediakan)
+  const legacyHeaders = {
+    "Authorization": `Bearer ${SUPABASE_LEGACY_ANON_JWT}`,
+    "apikey": SUPABASE_LEGACY_ANON_JWT,
+    "Content-Type": "application/json"
+  };
+  return await callWithHeaders(legacyHeaders, "legacy");
+}
+
 
   // === HELPERS (pastikan didefinisikan SEBELUM exportViaServer) ===
   async function getSignedUpload(file){
