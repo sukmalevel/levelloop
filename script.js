@@ -5,7 +5,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   /* ==================== SUPABASE CONFIG ==================== */
   const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co";   // ganti punyamu kalau beda
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVhZWtzbXFwbHNrZnJ4eHd3dGJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3Mjk3MjcsImV4cCI6MjA3MDMwNTcyN30.j8SQcbk3lBfhnTgcpKH9cDtI6NgRcxiDhxWegDSxH24";                       // <-- isi anon key
+  const SUPABASE_ANON_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk";                       // <-- isi anon key
 
   if (!window.supabase) {
     alert("Supabase SDK belum dimuat. Tambahkan CDN supabase-js di index.html");
@@ -261,3 +261,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
