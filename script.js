@@ -1,29 +1,27 @@
 /*******************************************************
  * LevelLoop — Server mode (Supabase Edge + HF)
  * Patch 2025-08-10 — aman untuk HP RAM kecil
+ * Catatan penting:
+ *  - Pastikan di Supabase Storage ADA bucket bernama persis: videos (private)
+ *  - Edge Functions: signed-upload & request-cut -> Verify JWT = OFF
  *******************************************************/
 document.addEventListener('DOMContentLoaded', () => {
   /* ===================== CONFIG ===================== */
-  // URL project (Settings → API → Project URL)
+  // TODO: ganti ke Project URL kamu
   const SUPABASE_URL = "https://uaeksmqplskfrxxwwtbu.supabase.co";
 
-  // KUNCI BARU (Settings → API → tab "API Keys")
-  // Pakai PUBLISHABLE KEY (prefix: sb_publishable_) untuk FRONTEND
-  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // TODO: ganti
+  // TODO: Publishable key (boleh kosong karena kita pakai fetch-only untuk functions,
+  // tapi DIPAKAI untuk uploadToSignedUrl via SDK storage).
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // <- ganti
 
-  // (OPSIONAL) Legacy anon JWT (tab "Legacy API Keys", prefix: eyJ...)
-  // Isi kalau mau fallback otomatis bila gateway masih minta JWT lama.
-  const SUPABASE_LEGACY_ANON_JWT = ""; // boleh kosong
-
-  // Bucket tempat simpan file (harus ada di Supabase Storage)
+  // Nama bucket di Supabase Storage (HARUS ADA)
   const STORAGE_BUCKET = "videos";
 
   /* ================== Inisialisasi SDK ================= */
   if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-  console.log("[supabase key prefix]", SUPABASE_PUBLISHABLE_KEY.slice(0,16)); // harus "sb_publishable_"
 
-  /* ================== Helper DOM aman ================== */
+  /* ================== Helper DOM ================== */
   const $ = (sel) => document.querySelector(sel);
   const ensure = (sel, create) => { let el=$(sel); if(!el && create){el=create();} return el; };
 
@@ -67,48 +65,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!el) {
       el = document.createElement('pre');
       el.id = 'debug-log';
-      el.style.cssText = 'white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:8px;max-height:200px;overflow:auto;margin:12px;';
+      el.style.cssText = 'white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:8px;max-height:220px;overflow:auto;margin:12px;';
       document.body.appendChild(el);
     }
     el.textContent += `\n${new Date().toLocaleTimeString()}  ${msg}`;
   }
 
-  /* ===== EDGE INVOKER: publishable → (opsional) legacy ===== */
+  /* ===== EDGE INVOKER: fetch-only (JWT OFF) ===== */
   async function invokeEdge(name, payload){
-  const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-    method: 'POST',
-    headers: { "Content-Type": "application/json" }, // JWT OFF cukup ini
-    body: JSON.stringify(payload)
-  });
-  const text = await resp.text();
-  showDebug(`[invoke:${name}] status ${resp.status} -> ${text.slice(0,300)}`);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
-  return text ? JSON.parse(text) : {};
-}
-
-
-    // coba publishable (API baru)
-    const pubHeaders = {
-      "Authorization": `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-      "apikey": SUPABASE_PUBLISHABLE_KEY,
-      "Content-Type": "application/json"
-    };
-    try {
-      return await callWithHeaders(pubHeaders, "publishable");
-    } catch (e) {
-      const msg = String(e.message || e);
-      const canRetryLegacy = SUPABASE_LEGACY_ANON_JWT && (/401/.test(msg) || /Invalid JWT/i.test(msg));
-      if (!canRetryLegacy) throw e;
-      showDebug(`[invoke:${name}] Retry dengan legacy anon JWT`);
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+      method: 'POST',
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const text = await resp.text();
+    showDebug(`[invoke:${name}] status ${resp.status} -> ${text.slice(0,300)}`);
+    if (!resp.ok) {
+      // Bikin pesan ramah user untuk error storage 400/404
+      if (/related resource does not exist/i.test(text)) {
+        throw new Error("Storage bucket/path belum ada. Pastikan bucket bernama 'videos' sudah dibuat (private).");
+      }
+      if (/invalid_json_body/i.test(text)) {
+        throw new Error("Body yang dikirim ke Edge Function bukan JSON. Cek versi fungsi & deploy ulang.");
+      }
+      throw new Error(`HTTP ${resp.status} ${text}`);
     }
-
-    // retry legacy (opsional)
-    const legacyHeaders = {
-      "Authorization": `Bearer ${SUPABASE_LEGACY_ANON_JWT}`,
-      "apikey": SUPABASE_LEGACY_ANON_JWT,
-      "Content-Type": "application/json"
-    };
-    return await callWithHeaders(legacyHeaders, "legacy");
+    return text ? JSON.parse(text) : {};
   }
 
   /* =================== Helper Supabase =================== */
@@ -188,18 +170,23 @@ document.addEventListener('DOMContentLoaded', () => {
       mobileDownloadBtn.removeAttribute('href');
       mobileDownloadBtn.removeAttribute('download');
 
+      // 1) mintakan signed upload dari Edge
       const up = await getSignedUpload(currentFile);
       showDebug(`signed-upload OK: ${up.path}`);
 
+      // 2) upload file ke Storage via signed token
       await uploadWithToken(up.path, up.token, currentFile, up.contentType);
       showDebug(`uploadToSignedUrl OK`);
 
+      // 3) minta pemotongan
       const job = await requestCut(up.path, toMMSS(loopStart), toMMSS(loopEnd));
       showDebug(`request-cut OK: output=${job.outputPath}`);
 
+      // 4) tunggu file siap
       const ready = await waitUntilReady(job.outputSignedDownloadUrl);
       if (!ready) throw new Error('Proses belum selesai atau gagal di server.');
 
+      // 5) download
       const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
       if (isMobile) {
         alert("🎥 Video siap! Klik tombol hijau untuk download.");
@@ -217,7 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err){
       console.error("✖ ERROR (server export):", err);
-      alert("Gagal memproses: " + (err.message || err));
+      // Pesan user-friendly untuk bucket tidak ada
+      if (String(err.message || err).includes("bucket") || String(err).includes("related resource")) {
+        alert("Gagal: Bucket Storage 'videos' belum ada / salah nama. Buka Supabase → Storage → Create bucket: videos (private).");
+      } else {
+        alert("Gagal memproses: " + (err.message || err));
+      }
     } finally {
       loadingEl.style.display = 'none';
     }
@@ -231,4 +223,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
