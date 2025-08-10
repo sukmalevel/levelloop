@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const SUPABASE_ANON_KEY = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // <- ganti
   
   // Jika kosong, fallback tidak akan dicoba.
-  const SUPABASE_LEGACY_ANON_JWT = ""; // isi kalau mau fallback
+  const SUPABASE_LEGACY_ANON_JWT = "sb_publishable_2wCBhyPtiw739jpS3McxRQ_xpYTQ2Mk"; // isi kalau mau fallback
 
 	if (!window.supabase) { alert("Supabase SDK belum dimuat"); return; }
 	const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -209,3 +209,4 @@ async function invokeEdge(name, payload){
     if(!mobileDownloadBtn.href){ e.preventDefault(); alert("⚠️ Tidak ada file untuk diunduh. Silakan proses video dulu."); }
   });
 });
+
