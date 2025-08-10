@@ -75,26 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ===== EDGE INVOKER: publishable → (opsional) legacy ===== */
   async function invokeEdge(name, payload){
-    const callWithHeaders = async (headers, phase) => {
-      // 1) via SDK (ikutkan headers)
-      try {
-        const { data, error } = await sb.functions.invoke(name, { body: payload, headers });
-        if (error) throw error;
-        return data;
-      } catch (e1) {
-        showDebug(`[invoke:${name}] SDK(${phase}) gagal: ${e1?.message || e1}`);
-      }
-      // 2) fallback fetch
-      const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
-      const text = await resp.text();
-      showDebug(`[invoke:${name}] Fallback(${phase}) status ${resp.status} -> ${text.slice(0,300)}`);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
-      return text ? JSON.parse(text) : {};
-    };
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: 'POST',
+    headers: { "Content-Type": "application/json" }, // JWT OFF cukup ini
+    body: JSON.stringify(payload)
+  });
+  const text = await resp.text();
+  showDebug(`[invoke:${name}] status ${resp.status} -> ${text.slice(0,300)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
+  return text ? JSON.parse(text) : {};
+}
+
 
     // coba publishable (API baru)
     const pubHeaders = {
@@ -240,3 +231,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
