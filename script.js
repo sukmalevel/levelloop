@@ -108,13 +108,22 @@ document.addEventListener('DOMContentLoaded', () => {
   async function requestCut(path, start, end){
     return await invokeEdge('request-cut', { path, start, end });
   }
-  async function waitUntilReady(url, tries=120, intervalMs=5000){
-    for(let i=0;i<tries;i++){
-      try { const r = await fetch(url, { method:'HEAD', cache:'no-store' }); if (r.ok) return true; } catch(_) {}
-      await new Promise(res => setTimeout(res, intervalMs));
-    }
-    return false;
+// Poll ke outputCheckUrl (GET). Jika ready -> ambil signed download URL dari JSON.
+async function waitForDownloadLink(job, tries=120, intervalMs=5000){
+  if (job.outputSignedDownloadUrl) return job.outputSignedDownloadUrl; // kompatibel kalau suatu saat tersedia
+  const checkUrl = job.outputCheckUrl;
+  for (let i=0; i<tries; i++){
+    try {
+      const r = await fetch(checkUrl, { cache: 'no-store' });
+      if (r.ok) {
+        const j = await r.json();
+        if (j.ready && j.url) return j.url;
+      }
+    } catch (_) {}
+    await new Promise(res => setTimeout(res, intervalMs));
   }
+  throw new Error('Timeout menunggu output siap.');
+}
   const toMMSS = (sec)=>`${String(Math.floor(sec/60)).padStart(2,'0')}:${String(Math.floor(sec%60)).padStart(2,'0')}`;
 
   /* =================== Upload UI =================== */
@@ -223,3 +232,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
