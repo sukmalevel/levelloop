@@ -4,15 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LevelLoop - Video Loop Tool</title>
+
+  <!-- Favicon kosong: hilangkan warning 404 -->
+  <link rel="icon" href="data:,">
+
+  <!-- Icon & CSS -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-  
+  <link rel="stylesheet" href="style.css"/>
+
   <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
   <header>
-    <div class="logo"><i class="fas fa-redo"></i><h1>LevelLoop</h1></div>
+    <div class="logo">
+      <i class="fas fa-redo"></i>
+      <h1>LevelLoop</h1>
+    </div>
   </header>
 
   <main>
@@ -32,12 +40,19 @@
         <button id="clear-loop">Clear</button>
         <button id="export-video"><i class="fas fa-download"></i> Export Loop</button>
       </div>
-      <div class="video-container"><video id="video" controls></video></div>
+
+      <div class="video-container">
+        <video id="video" controls></video>
+      </div>
+
+      <!-- Tombol download manual untuk HP -->
       <a id="mobile-download" href="#" download style="display:none;">⬇️ Download Video</a>
     </section>
 
+    <!-- Loader + spinner -->
     <div id="loading" style="display:none;text-align:center;margin:20px 0;">
-      <p>🎥 Memproses video di... (jangan tutup halaman)</p>
+      <p>🎥 Memproses video di server... (jangan tutup halaman)</p>
+      <div class="spinner"></div>
     </div>
   </main>
 
