@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  
+  
+// (opsional debug) lihat 16 karakter awal key biar yakin yang dipakai sudah publishable
+	console.log("[supabase key prefix]", SUPABASE_ANON_KEY.slice(0, 16));
+
 
   /* ==================== UTIL DOM ==================== */
   function ensureEl(selector, createFn) {
@@ -73,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingEl = document.createElement('div');
     loadingEl.id = 'loading';
     loadingEl.style.cssText = 'display:none;text-align:center;margin:20px 0;';
-    loadingEl.innerHTML = `<p>🎥 Memproses video di server... (jangan tutup halaman)</p><div class="spinner"></div>`;
+    loadingEl.innerHTML = `<p>🎥 Memproses video... (jangan tutup halaman)</p><div class="spinner"></div>`;
     document.body.appendChild(loadingEl);
   }
 
@@ -129,29 +134,38 @@ async function invokeEdge(name, payload) {
 
 
   /* ==================== SUPABASE HELPERS ==================== */
-  async function getSignedUpload(file) {
-    return await invokeEdge('signed-upload', {
-      filename: file.name,
-      contentType: file.type || 'video/mp4'
+ // === EDGE INVOKER: SDK (dengan headers) → fallback fetch ===
+async function invokeEdge(name, payload) {
+  const baseHeaders = {
+    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,  // WAJIB publishable
+    "apikey": SUPABASE_ANON_KEY,
+    "Content-Type": "application/json"
+  };
+
+  // 1) Coba via SDK tapi pastikan headers ikut
+  try {
+    const { data, error } = await sb.functions.invoke(name, {
+      body: payload,
+      headers: baseHeaders
     });
+    if (error) throw error;
+    return data;
+  } catch (e1) {
+    showDebug(`[invoke:${name}] SDK gagal: ${e1?.message || e1}`);
   }
-  async function uploadWithToken(path, token, file, contentType) {
-    const { error } = await sb.storage.from('videos').uploadToSignedUrl(path, token, file, { contentType });
-    if (error) throw new Error(error.message || "uploadToSignedUrl failed");
-  }
-  async function requestCut(path, start, end) {
-    return await invokeEdge('request-cut', { path, start, end });
-  }
-  async function waitUntilReady(url, tries = 120, intervalMs = 5000) {
-    for (let i = 0; i < tries; i++) {
-      try {
-        const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
-        if (r.ok) return true;
-      } catch (_) {}
-      await new Promise(res => setTimeout(res, intervalMs));
-    }
-    return false;
-  }
+
+  // 2) Fallback langsung ke endpoint
+  const resp = await fetch(`${SUPABASE_URL}/functions/v1/${name}`, {
+    method: "POST",
+    headers: baseHeaders,
+    body: JSON.stringify(payload)
+  });
+  const text = await resp.text();
+  showDebug(`[invoke:${name}] Fallback status ${resp.status} -> ${text.slice(0, 300)}`);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${text}`);
+  return text ? JSON.parse(text) : {};
+}
+
 
   /* ==================== UPLOAD UI ==================== */
   if (dropZone) dropZone.addEventListener('click', () => fileInput?.click());
